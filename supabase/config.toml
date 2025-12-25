@@ -2,3 +2,6 @@ project_id = "idkbysaogpvcmykbcxtx"
 
 [functions.expand-prompt]
 verify_jwt = false
+
+[functions.extract-text]
+verify_jwt = false

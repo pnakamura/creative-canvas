@@ -1,21 +1,22 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { useFlowStore, NodeData } from '@/store/flowStore';
+import { useFlowStore, NodeData, NodeCategory } from '@/store/flowStore';
 import { LucideIcon } from 'lucide-react';
 
 interface BaseNodeProps extends NodeProps {
   icon: LucideIcon;
   iconColor?: string;
+  nodeCategory?: NodeCategory;
   children: React.ReactNode;
   inputs?: Array<{
     id: string;
-    type: 'text' | 'image';
+    type: 'text' | 'image' | 'context';
     label?: string;
   }>;
   outputs?: Array<{
     id: string;
-    type: 'text' | 'image';
+    type: 'text' | 'image' | 'context';
     label?: string;
   }>;
 }
@@ -26,30 +27,38 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   selected,
   icon: Icon,
   iconColor = 'text-primary',
+  nodeCategory,
   children,
   inputs = [],
   outputs = [],
 }) => {
   const nodeData = data as NodeData;
   const { isProcessing, isComplete, error } = nodeData;
+  const category = nodeCategory || nodeData.category;
   const setSelectedNode = useFlowStore((state) => state.setSelectedNode);
 
   const handleClick = () => {
     setSelectedNode(id);
   };
 
-  const getHandleStyle = (type: 'text' | 'image') => {
+  const getHandleStyle = (type: 'text' | 'image' | 'context') => {
     if (type === 'text') {
       return { background: 'hsl(var(--handle-text))', borderColor: 'hsl(var(--handle-text))' };
     }
+    if (type === 'context') {
+      return { background: 'hsl(var(--handle-context))', borderColor: 'hsl(var(--handle-context))' };
+    }
     return { background: 'hsl(var(--handle-image))', borderColor: 'hsl(var(--handle-image))' };
   };
+
+  const categoryClass = category ? `node-${category}` : '';
 
   return (
     <div
       onClick={handleClick}
       className={cn(
         'node-container min-w-[280px] max-w-[320px] cursor-pointer',
+        categoryClass,
         selected && 'selected',
         isProcessing && 'animate-pulse-glow',
         error && 'border-destructive'
@@ -64,7 +73,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
           id={input.id}
           style={{
             ...getHandleStyle(input.type),
-            top: inputs.length > 1 ? `${30 + index * 30}%` : '50%',
+            top: inputs.length > 1 ? `${25 + index * 25}%` : '50%',
           }}
           className="flow-handle"
         />
@@ -107,7 +116,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
           id={output.id}
           style={{
             ...getHandleStyle(output.type),
-            top: outputs.length > 1 ? `${30 + index * 30}%` : '50%',
+            top: outputs.length > 1 ? `${25 + index * 25}%` : '50%',
           }}
           className="flow-handle"
         />
