@@ -5,11 +5,14 @@ import { BaseNode } from './BaseNode';
 import { Button } from '@/components/ui/button';
 import { useFlowStore, NodeData } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const AssistantNode: React.FC<NodeProps> = (props) => {
   const { updateNodeData, getConnectedNodes } = useFlowStore();
   const nodeData = props.data as NodeData;
   const { isProcessing, prompt, error } = nodeData;
+  const { toast } = useToast();
 
   const handleExpand = async () => {
     const { inputs } = getConnectedNodes(props.id);
@@ -17,26 +20,55 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
     
     if (!textInput?.data.content) {
       updateNodeData(props.id, { error: 'No input text connected' });
+      toast({
+        title: "No input",
+        description: "Connect a Text node with content first",
+        variant: "destructive",
+      });
       return;
     }
 
     updateNodeData(props.id, { isProcessing: true, error: undefined });
 
-    // Simulate AI processing (will be replaced with actual API call)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const { data, error: fnError } = await supabase.functions.invoke('expand-prompt', {
+        body: { prompt: textInput.data.content },
+      });
+
+      if (fnError) {
+        throw new Error(fnError.message);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      const expandedPrompt = data?.expandedPrompt;
       
-      const enhancedPrompt = `A masterfully composed ${textInput.data.content}, rendered in stunning 8K resolution with cinematic lighting. Featuring intricate details, volumetric atmosphere, and professional color grading. Artstation trending, hyperrealistic, octane render.`;
+      if (!expandedPrompt) {
+        throw new Error('No response from AI');
+      }
       
       updateNodeData(props.id, {
-        prompt: enhancedPrompt,
+        prompt: expandedPrompt,
         isProcessing: false,
         isComplete: true,
       });
+
+      toast({
+        title: "Prompt expanded",
+        description: "Your creative prompt has been enhanced",
+      });
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to expand prompt';
       updateNodeData(props.id, {
-        error: 'Failed to expand prompt',
+        error: errorMessage,
         isProcessing: false,
+      });
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
       });
     }
   };
