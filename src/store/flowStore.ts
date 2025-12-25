@@ -10,11 +10,13 @@ import {
   EdgeChange,
 } from '@xyflow/react';
 
-export type NodeType = 'text' | 'assistant' | 'imageGenerator' | 'videoGenerator';
+export type NodeType = 'text' | 'assistant' | 'imageGenerator' | 'videoGenerator' | 'reference';
+export type NodeCategory = 'source' | 'processor' | 'generator';
 
 export interface NodeData extends Record<string, unknown> {
   label: string;
   type: NodeType;
+  category?: NodeCategory;
   content?: string;
   prompt?: string;
   imageUrl?: string;
@@ -22,6 +24,11 @@ export interface NodeData extends Record<string, unknown> {
   isProcessing?: boolean;
   isComplete?: boolean;
   error?: string;
+  // Reference node specific
+  assetUrl?: string;
+  assetType?: 'image' | 'pdf' | 'text' | 'link';
+  fileName?: string;
+  extractedText?: string;
   settings?: {
     seed?: number;
     aspectRatio?: string;
@@ -58,7 +65,23 @@ const getNodeLabel = (type: NodeType): string => {
     case 'assistant': return 'AI Assistant';
     case 'imageGenerator': return 'Image Generator';
     case 'videoGenerator': return 'Video Generator';
+    case 'reference': return 'Reference';
     default: return 'Node';
+  }
+};
+
+const getNodeCategory = (type: NodeType): NodeCategory => {
+  switch (type) {
+    case 'text':
+    case 'reference':
+      return 'source';
+    case 'assistant':
+      return 'processor';
+    case 'imageGenerator':
+    case 'videoGenerator':
+      return 'generator';
+    default:
+      return 'source';
   }
 };
 
@@ -70,6 +93,7 @@ const initialNodes: FlowNode[] = [
     data: {
       label: 'Text Input',
       type: 'text',
+      category: 'source',
       content: '',
     },
   },
@@ -80,6 +104,7 @@ const initialNodes: FlowNode[] = [
     data: {
       label: 'AI Assistant',
       type: 'assistant',
+      category: 'processor',
       prompt: '',
     },
   },
@@ -90,6 +115,7 @@ const initialNodes: FlowNode[] = [
     data: {
       label: 'Image Generator',
       type: 'imageGenerator',
+      category: 'generator',
       settings: {
         aspectRatio: '1:1',
         guidanceScale: 7.5,
@@ -136,7 +162,6 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   },
 
   onConnect: (connection) => {
-    // Validate connection types
     const sourceNode = get().nodes.find((n) => n.id === connection.source);
     const targetNode = get().nodes.find((n) => n.id === connection.target);
 
@@ -154,6 +179,15 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       return;
     }
 
+    // Reference node can connect to assistant (context) or image generator (image-to-image)
+    if (sourceNode.data.type === 'reference') {
+      const validTargets = ['assistant', 'imageGenerator'];
+      if (!validTargets.includes(targetNode.data.type)) {
+        console.warn('Reference can only connect to Assistant or Image Generator');
+        return;
+      }
+    }
+
     set({
       edges: addEdge(connection, get().edges),
     });
@@ -165,6 +199,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       assistant: 'assistantNode',
       imageGenerator: 'imageGeneratorNode',
       videoGenerator: 'videoGeneratorNode',
+      reference: 'referenceNode',
     };
 
     const newNode: FlowNode = {
@@ -174,6 +209,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       data: {
         label: getNodeLabel(type),
         type,
+        category: getNodeCategory(type),
         settings: type === 'imageGenerator' ? {
           aspectRatio: '1:1',
           guidanceScale: 7.5,

@@ -46,6 +46,7 @@
     --handle-output: 280 65% 60%;
     --handle-image: 45 90% 55%;
     --handle-text: 187 80% 55%;
+    --handle-context: 320 70% 60%;
     
     --edge-default: 222 30% 35%;
     --edge-active: 187 80% 55%;
@@ -54,6 +55,11 @@
     --glass-border: 222 30% 25% / 0.5;
     
     --grid-color: 222 30% 15%;
+    
+    /* Node type border colors */
+    --node-source: 140 70% 50%;
+    --node-processor: 260 60% 55%;
+    --node-generator: 45 90% 55%;
 
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 40% 96%;
@@ -114,16 +120,50 @@
   .node-container {
     @apply rounded-xl overflow-hidden transition-all duration-300;
     background: hsl(var(--node-bg));
-    border: 1px solid hsl(var(--node-border));
+    border: 2px solid hsl(var(--node-border));
   }
   
   .node-container:hover {
-    border-color: hsl(var(--primary) / 0.4);
+    border-color: hsl(var(--primary) / 0.5);
   }
   
   .node-container.selected {
     border-color: hsl(var(--primary));
     box-shadow: 0 0 30px hsl(var(--primary) / 0.3), 0 0 60px hsl(var(--primary) / 0.1);
+  }
+  
+  /* Node type-specific borders */
+  .node-container.node-source {
+    border-color: hsl(var(--node-source) / 0.5);
+  }
+  .node-container.node-source:hover {
+    border-color: hsl(var(--node-source) / 0.8);
+  }
+  .node-container.node-source.selected {
+    border-color: hsl(var(--node-source));
+    box-shadow: 0 0 30px hsl(var(--node-source) / 0.3), 0 0 60px hsl(var(--node-source) / 0.1);
+  }
+  
+  .node-container.node-processor {
+    border-color: hsl(var(--node-processor) / 0.5);
+  }
+  .node-container.node-processor:hover {
+    border-color: hsl(var(--node-processor) / 0.8);
+  }
+  .node-container.node-processor.selected {
+    border-color: hsl(var(--node-processor));
+    box-shadow: 0 0 30px hsl(var(--node-processor) / 0.3), 0 0 60px hsl(var(--node-processor) / 0.1);
+  }
+  
+  .node-container.node-generator {
+    border-color: hsl(var(--node-generator) / 0.5);
+  }
+  .node-container.node-generator:hover {
+    border-color: hsl(var(--node-generator) / 0.8);
+  }
+  .node-container.node-generator.selected {
+    border-color: hsl(var(--node-generator));
+    box-shadow: 0 0 30px hsl(var(--node-generator) / 0.3), 0 0 60px hsl(var(--node-generator) / 0.1);
   }
   
   .node-header {
@@ -153,6 +193,11 @@
     border-color: hsl(var(--handle-image));
   }
   
+  .handle-context {
+    background: hsl(var(--handle-context));
+    border-color: hsl(var(--handle-context));
+  }
+  
   .toolbar-button {
     @apply flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200;
     @apply bg-muted/50 hover:bg-muted text-foreground/80 hover:text-foreground;
@@ -161,6 +206,17 @@
   
   .toolbar-button.primary {
     @apply bg-primary/20 hover:bg-primary/30 text-primary border-primary/30;
+  }
+  
+  /* Drop zone styles */
+  .dropzone {
+    @apply border-2 border-dashed border-border/50 rounded-lg p-4 text-center transition-all duration-200;
+  }
+  .dropzone:hover, .dropzone.active {
+    @apply border-primary/50 bg-primary/5;
+  }
+  .dropzone.dragging {
+    @apply border-primary bg-primary/10 scale-[1.02];
   }
 }
 
@@ -220,19 +276,27 @@
 
 .react-flow__edge-path {
   stroke: hsl(var(--edge-default)) !important;
-  stroke-width: 2 !important;
+  stroke-width: 2.5 !important;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease !important;
 }
 
 .react-flow__edge.selected .react-flow__edge-path,
 .react-flow__edge:hover .react-flow__edge-path {
   stroke: hsl(var(--primary)) !important;
-  stroke-width: 3 !important;
+  stroke-width: 3.5 !important;
+  filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.5));
 }
 
 .react-flow__edge.animated .react-flow__edge-path {
   stroke: hsl(var(--primary)) !important;
   stroke-dasharray: 8 4;
-  animation: flow 1s linear infinite;
+  animation: flow 0.8s linear infinite;
+  filter: drop-shadow(0 0 4px hsl(var(--primary) / 0.4));
+}
+
+/* Bezier curve smoothness */
+.react-flow__edge {
+  pointer-events: visibleStroke;
 }
 
 .react-flow__handle {

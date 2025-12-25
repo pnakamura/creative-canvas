@@ -1,6 +1,6 @@
 import React from 'react';
 import { NodeProps } from '@xyflow/react';
-import { Sparkles, Wand2 } from 'lucide-react';
+import { Sparkles, Wand2, FileText, Image } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { Button } from '@/components/ui/button';
 import { useFlowStore, NodeData } from '@/store/flowStore';
@@ -16,13 +16,18 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
 
   const handleExpand = async () => {
     const { inputs } = getConnectedNodes(props.id);
+    
+    // Find text input
     const textInput = inputs.find((n) => n.data.type === 'text');
     
-    if (!textInput?.data.content) {
-      updateNodeData(props.id, { error: 'No input text connected' });
+    // Find reference/context input
+    const referenceInput = inputs.find((n) => n.data.type === 'reference');
+    
+    if (!textInput?.data.content && !referenceInput) {
+      updateNodeData(props.id, { error: 'No input connected' });
       toast({
         title: "No input",
-        description: "Connect a Text node with content first",
+        description: "Connect a Text node or Reference node first",
         variant: "destructive",
       });
       return;
@@ -31,8 +36,31 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
     updateNodeData(props.id, { isProcessing: true, error: undefined });
 
     try {
+      // Build the prompt with context if available
+      let basePrompt = textInput?.data.content || '';
+      let contextData = '';
+      let hasImageContext = false;
+      let imageUrl = '';
+
+      if (referenceInput) {
+        const refData = referenceInput.data;
+        if (refData.assetType === 'image' && refData.assetUrl) {
+          hasImageContext = true;
+          imageUrl = refData.assetUrl;
+        } else if (refData.extractedText) {
+          contextData = refData.extractedText;
+        } else if (refData.assetUrl) {
+          contextData = `[Reference: ${refData.fileName || refData.assetUrl}]`;
+        }
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke('expand-prompt', {
-        body: { prompt: textInput.data.content },
+        body: { 
+          prompt: basePrompt,
+          context: contextData,
+          hasImage: hasImageContext,
+          imageUrl: hasImageContext ? imageUrl : undefined,
+        },
       });
 
       if (fnError) {
@@ -57,7 +85,9 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
 
       toast({
         title: "Prompt expanded",
-        description: "Your creative prompt has been enhanced",
+        description: hasImageContext 
+          ? "Your prompt has been enhanced with image analysis" 
+          : "Your creative prompt has been enhanced",
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to expand prompt';
@@ -73,15 +103,46 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
     }
   };
 
+  // Check for connected context
+  const { inputs } = getConnectedNodes(props.id);
+  const hasTextInput = inputs.some((n) => n.data.type === 'text');
+  const hasReferenceInput = inputs.some((n) => n.data.type === 'reference');
+  const referenceInput = inputs.find((n) => n.data.type === 'reference');
+
   return (
     <BaseNode
       {...props}
       icon={Sparkles}
       iconColor="text-secondary"
-      inputs={[{ id: 'text-in', type: 'text' }]}
+      nodeCategory="processor"
+      inputs={[
+        { id: 'text-in', type: 'text', label: 'Text' },
+        { id: 'context-in', type: 'context', label: 'Context' },
+      ]}
       outputs={[{ id: 'text-out', type: 'text' }]}
     >
       <div className="space-y-3">
+        {/* Context indicators */}
+        {(hasTextInput || hasReferenceInput) && (
+          <div className="flex flex-wrap gap-1">
+            {hasTextInput && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-primary/20 text-primary">
+                <FileText className="w-3 h-3" /> Text
+              </span>
+            )}
+            {hasReferenceInput && referenceInput && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-400">
+                {referenceInput.data.assetType === 'image' ? (
+                  <Image className="w-3 h-3" />
+                ) : (
+                  <FileText className="w-3 h-3" />
+                )}
+                {referenceInput.data.assetType === 'image' ? 'Image' : 'Doc'}
+              </span>
+            )}
+          </div>
+        )}
+
         <Button
           onClick={(e) => {
             e.stopPropagation();

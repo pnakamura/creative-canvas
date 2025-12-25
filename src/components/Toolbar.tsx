@@ -8,6 +8,7 @@ import {
   Loader2,
   Plus,
   Trash2,
+  File,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
 import { useFlowStore, NodeType } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
@@ -34,9 +36,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
     addNode(type, { x: centerX + Math.random() * 100, y: centerY + Math.random() * 100 });
   };
 
-  const nodeOptions = [
-    { type: 'text' as NodeType, label: 'Text Input', icon: Type, color: 'text-handle-text' },
+  const sourceNodes = [
+    { type: 'text' as NodeType, label: 'Text Input', icon: Type, color: 'text-green-400' },
+    { type: 'reference' as NodeType, label: 'Reference', icon: File, color: 'text-green-400' },
+  ];
+
+  const processorNodes = [
     { type: 'assistant' as NodeType, label: 'AI Assistant', icon: Sparkles, color: 'text-secondary' },
+  ];
+
+  const generatorNodes = [
     { type: 'imageGenerator' as NodeType, label: 'Image Generator', icon: Image, color: 'text-handle-image' },
     { type: 'videoGenerator' as NodeType, label: 'Video Generator', icon: Video, color: 'text-accent' },
   ];
@@ -51,19 +60,48 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
               <span className="hidden sm:inline">Add Node</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="glass-panel border-border/50" align="start">
-            <DropdownMenuLabel className="text-muted-foreground">Node Types</DropdownMenuLabel>
+          <DropdownMenuContent className="glass-panel border-border/50 w-48" align="start">
+            <DropdownMenuLabel className="text-muted-foreground text-xs uppercase tracking-wide">Sources</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              {sourceNodes.map((option) => (
+                <DropdownMenuItem
+                  key={option.type}
+                  onClick={() => handleAddNode(option.type)}
+                  className="gap-2 cursor-pointer focus:bg-muted"
+                >
+                  <option.icon className={cn('w-4 h-4', option.color)} />
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-border/50" />
-            {nodeOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.type}
-                onClick={() => handleAddNode(option.type)}
-                className="gap-2 cursor-pointer focus:bg-muted"
-              >
-                <option.icon className={cn('w-4 h-4', option.color)} />
-                {option.label}
-              </DropdownMenuItem>
-            ))}
+            <DropdownMenuLabel className="text-muted-foreground text-xs uppercase tracking-wide">Processors</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              {processorNodes.map((option) => (
+                <DropdownMenuItem
+                  key={option.type}
+                  onClick={() => handleAddNode(option.type)}
+                  className="gap-2 cursor-pointer focus:bg-muted"
+                >
+                  <option.icon className={cn('w-4 h-4', option.color)} />
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="bg-border/50" />
+            <DropdownMenuLabel className="text-muted-foreground text-xs uppercase tracking-wide">Generators</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              {generatorNodes.map((option) => (
+                <DropdownMenuItem
+                  key={option.type}
+                  onClick={() => handleAddNode(option.type)}
+                  className="gap-2 cursor-pointer focus:bg-muted"
+                >
+                  <option.icon className={cn('w-4 h-4', option.color)} />
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
 

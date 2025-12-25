@@ -6,6 +6,7 @@ import {
   MiniMap,
   BackgroundVariant,
   NodeTypes,
+  ConnectionLineType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -88,6 +89,7 @@ export const FlowCanvas: React.FC = () => {
     return {
       ...edge,
       animated: isAnimated,
+      type: 'smoothstep',
     };
   });
 
@@ -103,6 +105,10 @@ export const FlowCanvas: React.FC = () => {
         onConnect={onConnect}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes as NodeTypes}
+        connectionLineType={ConnectionLineType.SmoothStep}
+        defaultEdgeOptions={{
+          type: 'smoothstep',
+        }}
         fitView
         proOptions={{ hideAttribution: true }}
         className="bg-background"
@@ -118,11 +124,10 @@ export const FlowCanvas: React.FC = () => {
           className="glass-panel"
           nodeColor={(node) => {
             const data = node.data as NodeData;
-            switch (data?.type) {
-              case 'text': return 'hsl(var(--handle-text))';
-              case 'assistant': return 'hsl(var(--secondary))';
-              case 'imageGenerator': return 'hsl(var(--handle-image))';
-              case 'videoGenerator': return 'hsl(var(--accent))';
+            switch (data?.category) {
+              case 'source': return 'hsl(var(--node-source))';
+              case 'processor': return 'hsl(var(--node-processor))';
+              case 'generator': return 'hsl(var(--node-generator))';
               default: return 'hsl(var(--muted))';
             }
           }}
