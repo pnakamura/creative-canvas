@@ -24,7 +24,7 @@ import { useFlowStore, NodeType } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 
 interface ToolbarProps {
-  onExecuteFlow: () => void;
+  onExecuteFlow?: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
@@ -111,7 +111,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
           variant="ghost"
           className="toolbar-button primary"
           onClick={onExecuteFlow}
-          disabled={isExecuting || nodes.length === 0}
+          disabled={isExecuting || nodes.length === 0 || !onExecuteFlow}
         >
           {isExecuting ? (
             <Loader2 className="w-4 h-4 animate-spin" />

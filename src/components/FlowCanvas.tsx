@@ -12,11 +12,14 @@ import '@xyflow/react/dist/style.css';
 
 import { useFlowStore, NodeData } from '@/store/flowStore';
 import { nodeTypes } from './nodes';
-import { Toolbar } from './Toolbar';
-import { PropertiesSidebar } from './PropertiesSidebar';
 import { toast } from 'sonner';
 
-export const FlowCanvas: React.FC = () => {
+interface FlowCanvasProps {
+  showToolbar?: boolean;
+  onExecuteFlow?: () => void;
+}
+
+export const FlowCanvas: React.FC<FlowCanvasProps> = ({ showToolbar = false, onExecuteFlow }) => {
   const {
     nodes,
     edges,
@@ -94,9 +97,7 @@ export const FlowCanvas: React.FC = () => {
   });
 
   return (
-    <div className="w-full h-screen relative">
-      <Toolbar onExecuteFlow={executeFlow} />
-      
+    <div className="w-full h-full relative">
       <ReactFlow
         nodes={nodes}
         edges={animatedEdges}
@@ -134,8 +135,8 @@ export const FlowCanvas: React.FC = () => {
           maskColor="hsl(var(--background) / 0.8)"
         />
       </ReactFlow>
-
-      {selectedNodeId && <PropertiesSidebar />}
     </div>
   );
 };
+
+export { FlowCanvas as default };
