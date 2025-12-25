@@ -14,7 +14,139 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_edges: {
+        Row: {
+          created_at: string
+          edge_id: string
+          id: string
+          project_id: string
+          source: string
+          source_handle: string | null
+          target: string
+          target_handle: string | null
+        }
+        Insert: {
+          created_at?: string
+          edge_id: string
+          id?: string
+          project_id: string
+          source: string
+          source_handle?: string | null
+          target: string
+          target_handle?: string | null
+        }
+        Update: {
+          created_at?: string
+          edge_id?: string
+          id?: string
+          project_id?: string
+          source?: string
+          source_handle?: string | null
+          target?: string
+          target_handle?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_edges_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_nodes: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          node_id: string
+          node_type: string
+          position: Json
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          node_id: string
+          node_type: string
+          position?: Json
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          node_id?: string
+          node_type?: string
+          position?: Json
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_nodes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
