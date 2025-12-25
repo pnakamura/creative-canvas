@@ -11,11 +11,11 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, context, hasImage, imageUrl } = await req.json();
     
-    if (!prompt || typeof prompt !== "string") {
+    if (!prompt && !context && !hasImage) {
       return new Response(
-        JSON.stringify({ error: "Prompt is required" }),
+        JSON.stringify({ error: "Prompt, context, or image is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -26,6 +26,58 @@ serve(async (req) => {
     }
 
     console.log("Expanding prompt:", prompt);
+    console.log("Has context:", !!context);
+    console.log("Has image:", hasImage);
+
+    // Build system prompt based on available inputs
+    let systemPrompt = `You are an expert creative prompt engineer for AI image generation. Your task is to take a concept and transform it into a detailed, vivid, and artistic prompt that will produce stunning visuals.
+
+Guidelines:
+- Add specific artistic styles (e.g., cinematic, photorealistic, anime, oil painting)
+- Include lighting details (e.g., golden hour, dramatic shadows, soft diffused light)
+- Mention composition elements (e.g., rule of thirds, centered, wide-angle)
+- Add atmosphere and mood (e.g., ethereal, moody, vibrant, serene)
+- Include technical quality keywords (e.g., 8K, highly detailed, masterpiece)
+- Keep the core concept intact but enhance it dramatically
+- Output ONLY the enhanced prompt, nothing else. No explanations or prefixes.`;
+
+    if (context) {
+      systemPrompt += `\n\nYou have been provided with reference document content. Use it to inform the style, tone, or subject matter of your enhanced prompt. Extract relevant visual elements, themes, or aesthetic cues from the document.`;
+    }
+
+    if (hasImage) {
+      systemPrompt += `\n\nYou have been provided with a reference image. Analyze its visual style, colors, composition, lighting, and mood. Use these elements to inform and enhance the prompt while maintaining consistency with the reference.`;
+    }
+
+    // Build user message content
+    const userContent: any[] = [];
+    
+    let textMessage = "";
+    if (prompt) {
+      textMessage = `Enhance this concept into a detailed image generation prompt: "${prompt}"`;
+    }
+    if (context) {
+      textMessage += `\n\nReference document content:\n---\n${context.substring(0, 5000)}\n---`;
+    }
+    if (!prompt && context) {
+      textMessage = `Based on the following reference document, create a detailed image generation prompt that captures its essence, themes, and visual style:\n\n${context.substring(0, 5000)}`;
+    }
+
+    if (hasImage && imageUrl) {
+      userContent.push({
+        type: "text",
+        text: textMessage || "Analyze this reference image and create a detailed prompt that captures its style, mood, and visual elements:"
+      });
+      userContent.push({
+        type: "image_url",
+        image_url: { url: imageUrl }
+      });
+    } else {
+      userContent.push({
+        type: "text",
+        text: textMessage
+      });
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -36,23 +88,8 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          {
-            role: "system",
-            content: `You are an expert creative prompt engineer for AI image generation. Your task is to take a simple concept and transform it into a detailed, vivid, and artistic prompt that will produce stunning visuals.
-
-Guidelines:
-- Add specific artistic styles (e.g., cinematic, photorealistic, anime, oil painting)
-- Include lighting details (e.g., golden hour, dramatic shadows, soft diffused light)
-- Mention composition elements (e.g., rule of thirds, centered, wide-angle)
-- Add atmosphere and mood (e.g., ethereal, moody, vibrant, serene)
-- Include technical quality keywords (e.g., 8K, highly detailed, masterpiece)
-- Keep the core concept intact but enhance it dramatically
-- Output ONLY the enhanced prompt, nothing else. No explanations or prefixes.`
-          },
-          {
-            role: "user",
-            content: `Enhance this concept into a detailed image generation prompt: "${prompt}"`
-          }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent }
         ],
       }),
     });
