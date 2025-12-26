@@ -10,11 +10,15 @@ import {
   EdgeChange,
 } from '@xyflow/react';
 
-export type NodeType = 'text' | 'assistant' | 'imageGenerator' | 'videoGenerator' | 'reference';
+export type NodeType = 'text' | 'assistant' | 'imageGenerator' | 'videoGenerator' | 'reference' | 'textAnalyzer';
 export type NodeCategory = 'source' | 'processor' | 'generator';
 
 export type AssistantMode = 'expand' | 'analyze' | 'brainstorm' | 'refine' | 'freestyle';
 export type AssistantTone = 'creative' | 'professional' | 'casual' | 'dramatic' | 'minimal';
+
+export type AnalyzerOutputType = 'report' | 'document' | 'infographic' | 'presentation' | 'mindmap' | 'analysis' | 'comparison' | 'summary';
+export type AnalyzerDepth = 'brief' | 'standard' | 'detailed' | 'comprehensive';
+export type AnalyzerFormat = 'structured' | 'narrative' | 'bullet-points' | 'academic';
 
 export interface AssistantSettings {
   mode: AssistantMode;
@@ -23,6 +27,29 @@ export interface AssistantSettings {
   outputLength: 'short' | 'medium' | 'long';
   includeNegativePrompt: boolean;
   preserveStyle: boolean;
+}
+
+export interface AnalyzerSettings {
+  outputType: AnalyzerOutputType;
+  depth: AnalyzerDepth;
+  format: AnalyzerFormat;
+  includeMetrics: boolean;
+  includeRecommendations: boolean;
+  language: string;
+  focusAreas: string[];
+}
+
+export interface AnalysisResultData {
+  prompt: string;
+  sections?: { title: string; description: string }[];
+  keyInsights?: string[];
+  recommendations?: string[];
+  metrics?: Record<string, any>;
+  metadata?: {
+    estimatedLength?: string;
+    complexity?: string;
+    primaryFocus?: string;
+  };
 }
 
 export interface NodeData extends Record<string, unknown> {
@@ -53,6 +80,9 @@ export interface NodeData extends Record<string, unknown> {
   // Assistant specific
   assistantSettings?: AssistantSettings;
   negativePrompt?: string;
+  // Text Analyzer specific
+  analyzerSettings?: AnalyzerSettings;
+  analysisResult?: AnalysisResultData;
 }
 
 export type FlowNode = Node<NodeData>;
@@ -84,6 +114,7 @@ const getNodeLabel = (type: NodeType): string => {
     case 'imageGenerator': return 'Image Generator';
     case 'videoGenerator': return 'Video Generator';
     case 'reference': return 'Reference';
+    case 'textAnalyzer': return 'Text Analyzer';
     default: return 'Node';
   }
 };
@@ -94,6 +125,7 @@ const getNodeCategory = (type: NodeType): NodeCategory => {
     case 'reference':
       return 'source';
     case 'assistant':
+    case 'textAnalyzer':
       return 'processor';
     case 'imageGenerator':
     case 'videoGenerator':
@@ -226,6 +258,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       imageGenerator: 'imageGeneratorNode',
       videoGenerator: 'videoGeneratorNode',
       reference: 'referenceNode',
+      textAnalyzer: 'textAnalyzerNode',
     };
 
     const newNode: FlowNode = {

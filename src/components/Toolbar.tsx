@@ -9,6 +9,7 @@ import {
   Plus,
   Trash2,
   File,
+  FileSearch,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,6 +44,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
 
   const processorNodes = [
     { type: 'assistant' as NodeType, label: 'AI Assistant', icon: Sparkles, color: 'text-secondary' },
+    { type: 'textAnalyzer' as NodeType, label: 'Text Analyzer', icon: FileSearch, color: 'text-cyan-400' },
   ];
 
   const generatorNodes = [

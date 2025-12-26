@@ -1,5 +1,17 @@
 project_id = "idkbysaogpvcmykbcxtx"
 
+[functions.ai-assistant]
+verify_jwt = false
+
+[functions.expand-prompt]
+verify_jwt = false
+
+[functions.extract-text]
+verify_jwt = false
+
+[functions.text-analyzer]
+verify_jwt = false
+
 [functions.expand-prompt]
 verify_jwt = false
 

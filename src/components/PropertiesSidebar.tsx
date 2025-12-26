@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Settings2, Type, Sparkles, Image, Video, FileText, Wand2, Brain, Lightbulb, Pencil, MessageSquare } from 'lucide-react';
+import { X, Settings2, Type, Sparkles, Image, Video, FileText, Wand2, Brain, Lightbulb, Pencil, MessageSquare, FileSearch, BarChart3, Presentation, Network, FileCheck, GitCompare, BookOpen, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,9 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings } from '@/store/flowStore';
+import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 const modeOptions: { value: AssistantMode; label: string; icon: React.ElementType; description: string }[] = [
   { value: 'expand', label: 'Expand', icon: Wand2, description: 'Enhance and add details' },
@@ -30,6 +32,31 @@ const toneOptions: { value: AssistantTone; label: string }[] = [
   { value: 'casual', label: 'Casual' },
   { value: 'dramatic', label: 'Dramatic' },
   { value: 'minimal', label: 'Minimal' },
+];
+
+const analyzerOutputOptions: { value: AnalyzerOutputType; label: string; icon: React.ElementType; description: string }[] = [
+  { value: 'report', label: 'Report', icon: FileText, description: 'Detailed written report' },
+  { value: 'document', label: 'Document', icon: FileCheck, description: 'Official document format' },
+  { value: 'infographic', label: 'Infographic', icon: BarChart3, description: 'Visual data layout' },
+  { value: 'presentation', label: 'Presentation', icon: Presentation, description: 'Slide deck structure' },
+  { value: 'mindmap', label: 'Mind Map', icon: Network, description: 'Concept hierarchy' },
+  { value: 'analysis', label: 'Analysis', icon: FileSpreadsheet, description: 'Structured analysis' },
+  { value: 'comparison', label: 'Comparison', icon: GitCompare, description: 'Side-by-side compare' },
+  { value: 'summary', label: 'Summary', icon: BookOpen, description: 'Executive summary' },
+];
+
+const analyzerDepthOptions: { value: AnalyzerDepth; label: string; description: string }[] = [
+  { value: 'brief', label: 'Brief', description: '200-400 words' },
+  { value: 'standard', label: 'Standard', description: '400-800 words' },
+  { value: 'detailed', label: 'Detailed', description: '800-1500 words' },
+  { value: 'comprehensive', label: 'Comprehensive', description: '1500+ words' },
+];
+
+const analyzerFormatOptions: { value: AnalyzerFormat; label: string }[] = [
+  { value: 'structured', label: 'Structured (Headers)' },
+  { value: 'narrative', label: 'Narrative (Prose)' },
+  { value: 'bullet-points', label: 'Bullet Points' },
+  { value: 'academic', label: 'Academic' },
 ];
 
 export const PropertiesSidebar: React.FC = () => {
@@ -48,6 +75,7 @@ export const PropertiesSidebar: React.FC = () => {
       case 'imageGenerator': return Image;
       case 'videoGenerator': return Video;
       case 'reference': return FileText;
+      case 'textAnalyzer': return FileSearch;
       default: return Settings2;
     }
   };
@@ -59,6 +87,7 @@ export const PropertiesSidebar: React.FC = () => {
       case 'imageGenerator': return 'text-handle-image';
       case 'videoGenerator': return 'text-accent';
       case 'reference': return 'text-pink-400';
+      case 'textAnalyzer': return 'text-cyan-400';
       default: return 'text-primary';
     }
   };
@@ -92,6 +121,25 @@ export const PropertiesSidebar: React.FC = () => {
     });
   };
 
+  const handleAnalyzerSettingsChange = (key: keyof AnalyzerSettings, value: any) => {
+    const currentSettings: AnalyzerSettings = data.analyzerSettings || {
+      outputType: 'report',
+      depth: 'detailed',
+      format: 'structured',
+      includeMetrics: true,
+      includeRecommendations: true,
+      language: 'pt-BR',
+      focusAreas: [],
+    };
+    
+    updateNodeData(selectedNodeId!, {
+      analyzerSettings: {
+        ...currentSettings,
+        [key]: value,
+      },
+    });
+  };
+
   const assistantSettings: AssistantSettings = data.assistantSettings || {
     mode: 'expand',
     tone: 'creative',
@@ -99,6 +147,16 @@ export const PropertiesSidebar: React.FC = () => {
     outputLength: 'medium',
     includeNegativePrompt: false,
     preserveStyle: false,
+  };
+
+  const analyzerSettings: AnalyzerSettings = data.analyzerSettings || {
+    outputType: 'report',
+    depth: 'detailed',
+    format: 'structured',
+    includeMetrics: true,
+    includeRecommendations: true,
+    language: 'pt-BR',
+    focusAreas: [],
   };
 
   const creativityLabel = () => {
@@ -303,6 +361,130 @@ export const PropertiesSidebar: React.FC = () => {
                 </div>
               </>
             )}
+          </>
+        )}
+
+        {/* Text Analyzer Settings */}
+        {data.type === 'textAnalyzer' && (
+          <>
+            <Separator className="bg-border/50" />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <FileSearch className="w-4 h-4 text-cyan-400" />
+                Text Analyzer Settings
+              </h3>
+
+              {/* Output Type */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Output Type
+                </Label>
+                <Select
+                  value={analyzerSettings.outputType}
+                  onValueChange={(value: AnalyzerOutputType) => handleAnalyzerSettingsChange('outputType', value)}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    {analyzerOutputOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center gap-2">
+                          <opt.icon className="w-4 h-4" />
+                          <div>
+                            <div className="font-medium">{opt.label}</div>
+                            <div className="text-xs text-muted-foreground">{opt.description}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Depth */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Analysis Depth
+                </Label>
+                <Select
+                  value={analyzerSettings.depth}
+                  onValueChange={(value: AnalyzerDepth) => handleAnalyzerSettingsChange('depth', value)}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    {analyzerDepthOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label} ({opt.description})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Format */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Format Style
+                </Label>
+                <Select
+                  value={analyzerSettings.format}
+                  onValueChange={(value: AnalyzerFormat) => handleAnalyzerSettingsChange('format', value)}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    {analyzerFormatOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator className="bg-border/50" />
+
+              {/* Toggles */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-foreground">Include Metrics</Label>
+                  <p className="text-xs text-muted-foreground">Add quantitative analysis</p>
+                </div>
+                <Switch
+                  checked={analyzerSettings.includeMetrics}
+                  onCheckedChange={(checked) => handleAnalyzerSettingsChange('includeMetrics', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-foreground">Recommendations</Label>
+                  <p className="text-xs text-muted-foreground">Include actionable insights</p>
+                </div>
+                <Switch
+                  checked={analyzerSettings.includeRecommendations}
+                  onCheckedChange={(checked) => handleAnalyzerSettingsChange('includeRecommendations', checked)}
+                />
+              </div>
+
+              {/* Focus Areas */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Focus Areas (comma separated)
+                </Label>
+                <Textarea
+                  placeholder="e.g., compliance, clarity, structure"
+                  value={analyzerSettings.focusAreas?.join(', ') || ''}
+                  onChange={(e) => handleAnalyzerSettingsChange('focusAreas', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                  className="bg-background/50 border-border/50 min-h-[60px] nodrag"
+                />
+              </div>
+            </div>
           </>
         )}
 

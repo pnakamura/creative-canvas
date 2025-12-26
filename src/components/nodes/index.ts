@@ -3,6 +3,7 @@ import { AssistantNode } from './AssistantNode';
 import { ImageGeneratorNode } from './ImageGeneratorNode';
 import { VideoGeneratorNode } from './VideoGeneratorNode';
 import { ReferenceNode } from './ReferenceNode';
+import { TextAnalyzerNode } from './TextAnalyzerNode';
 
 export const nodeTypes = {
   textNode: TextNode,
@@ -10,6 +11,7 @@ export const nodeTypes = {
   imageGeneratorNode: ImageGeneratorNode,
   videoGeneratorNode: VideoGeneratorNode,
   referenceNode: ReferenceNode,
+  textAnalyzerNode: TextAnalyzerNode,
 };
 
-export { TextNode, AssistantNode, ImageGeneratorNode, VideoGeneratorNode, ReferenceNode };
+export { TextNode, AssistantNode, ImageGeneratorNode, VideoGeneratorNode, ReferenceNode, TextAnalyzerNode };
