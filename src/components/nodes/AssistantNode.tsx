@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { NodeProps } from '@xyflow/react';
 import { Sparkles, Wand2, FileText, Image } from 'lucide-react';
 import { BaseNode } from './BaseNode';
@@ -14,13 +14,10 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
   const { isProcessing, prompt, error } = nodeData;
   const { toast } = useToast();
 
-  const handleExpand = async () => {
+  const handleExpand = useCallback(async () => {
     const { inputs } = getConnectedNodes(props.id);
     
-    // Find text input
     const textInput = inputs.find((n) => n.data.type === 'text');
-    
-    // Find reference/context input
     const referenceInput = inputs.find((n) => n.data.type === 'reference');
     
     if (!textInput?.data.content && !referenceInput) {
@@ -36,7 +33,6 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
     updateNodeData(props.id, { isProcessing: true, error: undefined });
 
     try {
-      // Build the prompt with context if available
       let basePrompt = textInput?.data.content || '';
       let contextData = '';
       let hasImageContext = false;
@@ -101,9 +97,8 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         variant: "destructive",
       });
     }
-  };
+  }, [props.id, getConnectedNodes, updateNodeData, toast]);
 
-  // Check for connected context
   const { inputs } = getConnectedNodes(props.id);
   const hasTextInput = inputs.some((n) => n.data.type === 'text');
   const hasReferenceInput = inputs.some((n) => n.data.type === 'reference');
@@ -114,6 +109,7 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
       {...props}
       icon={Sparkles}
       iconColor="text-secondary"
+      fixedDescription="AI-powered prompt expansion"
       nodeCategory="processor"
       inputs={[
         { id: 'text-in', type: 'text', label: 'Text' },
@@ -122,7 +118,6 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
       outputs={[{ id: 'text-out', type: 'text' }]}
     >
       <div className="space-y-3">
-        {/* Context indicators */}
         {(hasTextInput || hasReferenceInput) && (
           <div className="flex flex-wrap gap-1">
             {hasTextInput && (
@@ -150,7 +145,7 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
           }}
           disabled={isProcessing}
           className={cn(
-            'w-full gap-2 bg-secondary/20 hover:bg-secondary/30 text-secondary border border-secondary/30',
+            'nodrag w-full gap-2 bg-secondary/20 hover:bg-secondary/30 text-secondary border border-secondary/30',
             isProcessing && 'opacity-50'
           )}
           variant="outline"

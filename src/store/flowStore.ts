@@ -24,6 +24,8 @@ export interface NodeData extends Record<string, unknown> {
   isProcessing?: boolean;
   isComplete?: boolean;
   error?: string;
+  userDescription?: string;
+  onRun?: () => void | Promise<void>;
   // Reference node specific
   assetUrl?: string;
   assetType?: 'image' | 'pdf' | 'text' | 'link';

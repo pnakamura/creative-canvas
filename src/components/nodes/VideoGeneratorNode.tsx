@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { NodeProps } from '@xyflow/react';
 import { Video, Loader2, Play } from 'lucide-react';
 import { BaseNode } from './BaseNode';
@@ -11,7 +11,7 @@ export const VideoGeneratorNode: React.FC<NodeProps> = (props) => {
   const nodeData = props.data as NodeData;
   const { isProcessing, videoUrl, imageUrl, error } = nodeData;
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     const { inputs } = getConnectedNodes(props.id);
     const imageInput = inputs.find((n) => n.data.type === 'imageGenerator');
 
@@ -26,7 +26,6 @@ export const VideoGeneratorNode: React.FC<NodeProps> = (props) => {
       imageUrl: imageInput.data.imageUrl 
     });
 
-    // Simulate video generation (placeholder)
     try {
       await new Promise((resolve) => setTimeout(resolve, 4000));
       
@@ -41,13 +40,14 @@ export const VideoGeneratorNode: React.FC<NodeProps> = (props) => {
         isProcessing: false,
       });
     }
-  };
+  }, [props.id, getConnectedNodes, updateNodeData]);
 
   return (
     <BaseNode
       {...props}
       icon={Video}
       iconColor="text-accent"
+      fixedDescription="Animates image to video"
       inputs={[{ id: 'image-in', type: 'image' }]}
       outputs={[{ id: 'video-out', type: 'image' }]}
     >
@@ -108,7 +108,7 @@ export const VideoGeneratorNode: React.FC<NodeProps> = (props) => {
           }}
           disabled={isProcessing}
           className={cn(
-            'w-full gap-2',
+            'nodrag w-full gap-2',
             'bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30'
           )}
           variant="outline"

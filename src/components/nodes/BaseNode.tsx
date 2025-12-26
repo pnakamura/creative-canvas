@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { useFlowStore, NodeData, NodeCategory } from '@/store/flowStore';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, Loader2, Play } from 'lucide-react';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 interface BaseNodeProps extends NodeProps {
   icon: LucideIcon;
   iconColor?: string;
   nodeCategory?: NodeCategory;
+  fixedDescription?: string;
   children: React.ReactNode;
   inputs?: Array<{
     id: string;
@@ -28,18 +33,61 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   icon: Icon,
   iconColor = 'text-primary',
   nodeCategory,
+  fixedDescription,
   children,
   inputs = [],
   outputs = [],
 }) => {
   const nodeData = data as NodeData;
-  const { isProcessing, isComplete, error } = nodeData;
+  const { isProcessing, isComplete, error, label, userDescription } = nodeData;
   const category = nodeCategory || nodeData.category;
-  const setSelectedNode = useFlowStore((state) => state.setSelectedNode);
+  const { setSelectedNode, updateNodeData } = useFlowStore();
+  
+  const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [localLabel, setLocalLabel] = useState(label || '');
+  const [isRunning, setIsRunning] = useState(false);
 
   const handleClick = () => {
     setSelectedNode(id);
   };
+
+  const handleLabelChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalLabel(e.target.value);
+  }, []);
+
+  const handleLabelBlur = useCallback(() => {
+    setIsEditingLabel(false);
+    if (localLabel.trim() && localLabel !== label) {
+      updateNodeData(id, { label: localLabel.trim() });
+    } else {
+      setLocalLabel(label || '');
+    }
+  }, [id, localLabel, label, updateNodeData]);
+
+  const handleLabelKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleLabelBlur();
+    } else if (e.key === 'Escape') {
+      setLocalLabel(label || '');
+      setIsEditingLabel(false);
+    }
+  }, [handleLabelBlur, label]);
+
+  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateNodeData(id, { userDescription: e.target.value });
+  }, [id, updateNodeData]);
+
+  const handleRun = useCallback(async () => {
+    const onRun = nodeData.onRun as (() => void | Promise<void>) | undefined;
+    if (!onRun) return;
+    
+    setIsRunning(true);
+    try {
+      await onRun();
+    } finally {
+      setIsRunning(false);
+    }
+  }, [nodeData.onRun]);
 
   const getHandleStyle = (type: 'text' | 'image' | 'context') => {
     if (type === 'text') {
@@ -52,15 +100,17 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   };
 
   const categoryClass = category ? `node-${category}` : '';
+  const showRunButton = typeof nodeData.onRun === 'function';
+  const currentlyProcessing = isProcessing || isRunning;
 
   return (
-    <div
+    <Card
       onClick={handleClick}
       className={cn(
-        'node-container min-w-[280px] max-w-[320px] cursor-pointer',
+        'node-container min-w-[280px] max-w-[320px] cursor-pointer border-2',
         categoryClass,
         selected && 'selected',
-        isProcessing && 'animate-pulse-glow',
+        currentlyProcessing && 'animate-pulse-glow',
         error && 'border-destructive'
       )}
     >
@@ -80,32 +130,105 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
       ))}
 
       {/* Header */}
-      <div className="node-header">
-        <div className={cn('p-1.5 rounded-md bg-background/50', iconColor)}>
-          <Icon className="w-4 h-4" />
+      <CardHeader className="node-header p-3 space-y-0">
+        <div className="flex items-center gap-2 w-full">
+          <div className={cn('p-1.5 rounded-md bg-background/50 flex-shrink-0', iconColor)}>
+            <Icon className="w-4 h-4" />
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            {isEditingLabel ? (
+              <Input
+                value={localLabel}
+                onChange={handleLabelChange}
+                onBlur={handleLabelBlur}
+                onKeyDown={handleLabelKeyDown}
+                className="nodrag h-6 px-1 py-0 text-sm font-medium bg-transparent border-none focus-visible:ring-1 focus-visible:ring-primary"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span
+                className="text-sm font-medium text-foreground/90 cursor-text truncate block hover:text-foreground transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditingLabel(true);
+                  setLocalLabel(label || '');
+                }}
+              >
+                {label}
+              </span>
+            )}
+            
+            {fixedDescription && (
+              <span className="text-[10px] text-muted-foreground truncate block">
+                {fixedDescription}
+              </span>
+            )}
+          </div>
+
+          {/* Status indicators */}
+          <div className="flex-shrink-0">
+            {currentlyProcessing && (
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            )}
+            {isComplete && !currentlyProcessing && !error && (
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+            )}
+            {error && !currentlyProcessing && (
+              <div className="w-2 h-2 rounded-full bg-destructive" />
+            )}
+          </div>
         </div>
-        <span className="text-sm font-medium text-foreground/90">{nodeData.label}</span>
-        {isProcessing && (
-          <div className="ml-auto">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          </div>
-        )}
-        {isComplete && !isProcessing && (
-          <div className="ml-auto">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-          </div>
-        )}
-        {error && (
-          <div className="ml-auto">
-            <div className="w-2 h-2 rounded-full bg-destructive" />
-          </div>
-        )}
-      </div>
+      </CardHeader>
 
       {/* Body */}
-      <div className="node-body">
+      <CardContent className="node-body p-4 pt-3 space-y-3">
+        {/* User Description */}
+        <div className="space-y-1">
+          <Textarea
+            placeholder="Add notes or description..."
+            value={userDescription || ''}
+            onChange={handleDescriptionChange}
+            className="nodrag min-h-[40px] max-h-[80px] resize-none bg-background/50 border-border/50 text-xs placeholder:text-muted-foreground/50 focus:border-primary/50"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+
+        {/* Node-specific content */}
         {children}
-      </div>
+      </CardContent>
+
+      {/* Footer with Run button */}
+      {showRunButton && (
+        <CardFooter className="p-3 pt-0">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRun();
+            }}
+            disabled={currentlyProcessing}
+            className={cn(
+              'nodrag w-full gap-2',
+              'bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30'
+            )}
+            variant="outline"
+            size="sm"
+          >
+            {currentlyProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                Run
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      )}
 
       {/* Output Handles */}
       {outputs.map((output, index) => (
@@ -121,6 +244,6 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
           className="flow-handle"
         />
       ))}
-    </div>
+    </Card>
   );
 };
