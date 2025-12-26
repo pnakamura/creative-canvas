@@ -63,7 +63,6 @@ export const ReferenceNode: React.FC<NodeProps> = (props) => {
         isComplete: true,
       });
 
-      // If it's a text-based file, extract content
       if (type === 'text' || type === 'pdf') {
         extractTextContent(urlData.publicUrl, type, file.name);
       }
@@ -181,7 +180,7 @@ export const ReferenceNode: React.FC<NodeProps> = (props) => {
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6"
+              className="nodrag h-6 w-6"
               onClick={(e) => {
                 e.stopPropagation();
                 setPreviewOpen(true);
@@ -192,7 +191,7 @@ export const ReferenceNode: React.FC<NodeProps> = (props) => {
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 text-destructive hover:text-destructive"
+              className="nodrag h-6 w-6 text-destructive hover:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
                 clearAsset();
@@ -212,6 +211,7 @@ export const ReferenceNode: React.FC<NodeProps> = (props) => {
         {...props}
         icon={File}
         iconColor="text-green-400"
+        fixedDescription="Upload files or add external links"
         nodeCategory="source"
         inputs={[]}
         outputs={[
@@ -229,7 +229,7 @@ export const ReferenceNode: React.FC<NodeProps> = (props) => {
             renderAssetPreview()
           ) : (
             <Tabs defaultValue="upload" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 h-8">
+              <TabsList className="nodrag grid w-full grid-cols-3 h-8">
                 <TabsTrigger value="upload" className="text-xs px-2">
                   <Upload className="w-3 h-3 mr-1" />
                   Upload
@@ -248,7 +248,7 @@ export const ReferenceNode: React.FC<NodeProps> = (props) => {
                 <div
                   {...getRootProps()}
                   className={cn(
-                    'dropzone cursor-pointer',
+                    'nodrag dropzone cursor-pointer',
                     isDragActive && 'dragging'
                   )}
                 >
@@ -268,12 +268,12 @@ export const ReferenceNode: React.FC<NodeProps> = (props) => {
                   placeholder="https://..."
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
-                  className="h-8 text-xs"
+                  className="nodrag h-8 text-xs"
                   onClick={(e) => e.stopPropagation()}
                 />
                 <Button
                   size="sm"
-                  className="w-full h-7 text-xs"
+                  className="nodrag w-full h-7 text-xs"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleLinkSubmit();
@@ -288,7 +288,7 @@ export const ReferenceNode: React.FC<NodeProps> = (props) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full h-8 text-xs gap-2"
+                  className="nodrag w-full h-8 text-xs gap-2"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDriveConnect();

@@ -18,18 +18,21 @@ export const TextNode: React.FC<NodeProps> = (props) => {
       {...props}
       icon={Type}
       iconColor="text-handle-text"
+      fixedDescription="Text Input - Source node"
       outputs={[{ id: 'text-out', type: 'text' }]}
     >
-      <Textarea
-        placeholder="Enter your creative prompt..."
-        value={nodeData.content || ''}
-        onChange={handleContentChange}
-        className="min-h-[80px] resize-none bg-background/50 border-border/50 text-sm placeholder:text-muted-foreground/50 focus:border-primary/50"
-        onClick={(e) => e.stopPropagation()}
-      />
-      <p className="text-xs text-muted-foreground mt-2">
-        {(nodeData.content?.length || 0)} characters
-      </p>
+      <div className="space-y-2">
+        <Textarea
+          placeholder="Enter your creative prompt..."
+          value={nodeData.content || ''}
+          onChange={handleContentChange}
+          className="nodrag min-h-[80px] resize-none bg-background/50 border-border/50 text-sm placeholder:text-muted-foreground/50 focus:border-primary/50"
+          onClick={(e) => e.stopPropagation()}
+        />
+        <p className="text-xs text-muted-foreground">
+          {(nodeData.content?.length || 0)} characters
+        </p>
+      </div>
     </BaseNode>
   );
 };

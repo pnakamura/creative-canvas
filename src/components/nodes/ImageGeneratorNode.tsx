@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { NodeProps } from '@xyflow/react';
 import { Image, Loader2 } from 'lucide-react';
 import { BaseNode } from './BaseNode';
@@ -11,7 +11,7 @@ export const ImageGeneratorNode: React.FC<NodeProps> = (props) => {
   const nodeData = props.data as NodeData;
   const { isProcessing, imageUrl, error, settings } = nodeData;
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     const { inputs } = getConnectedNodes(props.id);
     const promptInput = inputs.find((n) => n.data.type === 'assistant' || n.data.type === 'text');
     
@@ -26,11 +26,9 @@ export const ImageGeneratorNode: React.FC<NodeProps> = (props) => {
 
     updateNodeData(props.id, { isProcessing: true, error: undefined });
 
-    // Simulate image generation (will be replaced with actual API)
     try {
       await new Promise((resolve) => setTimeout(resolve, 2500));
       
-      // Placeholder image for demo
       const placeholderUrl = `https://picsum.photos/seed/${Date.now()}/512/512`;
       
       updateNodeData(props.id, {
@@ -44,13 +42,14 @@ export const ImageGeneratorNode: React.FC<NodeProps> = (props) => {
         isProcessing: false,
       });
     }
-  };
+  }, [props.id, getConnectedNodes, updateNodeData]);
 
   return (
     <BaseNode
       {...props}
       icon={Image}
       iconColor="text-handle-image"
+      fixedDescription="Converts text prompt to image"
       inputs={[{ id: 'prompt-in', type: 'text' }]}
       outputs={[{ id: 'image-out', type: 'image' }]}
     >
@@ -91,7 +90,7 @@ export const ImageGeneratorNode: React.FC<NodeProps> = (props) => {
           }}
           disabled={isProcessing}
           className={cn(
-            'w-full gap-2',
+            'nodrag w-full gap-2',
             'bg-handle-image/20 hover:bg-handle-image/30 text-handle-image border border-handle-image/30'
           )}
           variant="outline"
