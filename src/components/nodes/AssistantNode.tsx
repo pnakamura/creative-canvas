@@ -1,20 +1,32 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { NodeProps } from '@xyflow/react';
-import { Sparkles, Wand2, FileText, Image } from 'lucide-react';
+import { Sparkles, Wand2, FileText, Image, Brain, Lightbulb, Pencil, MessageSquare, Zap } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { Button } from '@/components/ui/button';
-import { useFlowStore, NodeData } from '@/store/flowStore';
+import { useFlowStore, NodeData, AssistantMode } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+
+const modeConfig: Record<AssistantMode, { icon: React.ElementType; label: string; color: string }> = {
+  expand: { icon: Wand2, label: 'Expand', color: 'bg-secondary/20 text-secondary' },
+  analyze: { icon: Brain, label: 'Analyze', color: 'bg-blue-500/20 text-blue-400' },
+  brainstorm: { icon: Lightbulb, label: 'Brainstorm', color: 'bg-yellow-500/20 text-yellow-400' },
+  refine: { icon: Pencil, label: 'Refine', color: 'bg-green-500/20 text-green-400' },
+  freestyle: { icon: MessageSquare, label: 'Freestyle', color: 'bg-purple-500/20 text-purple-400' },
+};
 
 export const AssistantNode: React.FC<NodeProps> = (props) => {
   const { updateNodeData, getConnectedNodes } = useFlowStore();
   const nodeData = props.data as NodeData;
-  const { isProcessing, prompt, error } = nodeData;
+  const { isProcessing, prompt, error, assistantSettings, negativePrompt } = nodeData;
   const { toast } = useToast();
 
-  const handleExpand = useCallback(async () => {
+  const currentMode = assistantSettings?.mode || 'expand';
+  const ModeIcon = modeConfig[currentMode].icon;
+
+  const handleProcess = useCallback(async () => {
     const { inputs } = getConnectedNodes(props.id);
     
     const textInput = inputs.find((n) => n.data.type === 'text');
@@ -50,12 +62,27 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         }
       }
 
-      const { data, error: fnError } = await supabase.functions.invoke('expand-prompt', {
+      const settings = assistantSettings || {
+        mode: 'expand' as AssistantMode,
+        tone: 'creative',
+        creativity: 70,
+        outputLength: 'medium',
+        includeNegativePrompt: false,
+        preserveStyle: false,
+      };
+
+      const { data, error: fnError } = await supabase.functions.invoke('ai-assistant', {
         body: { 
           prompt: basePrompt,
           context: contextData,
           hasImage: hasImageContext,
           imageUrl: hasImageContext ? imageUrl : undefined,
+          mode: settings.mode,
+          tone: settings.tone,
+          creativity: settings.creativity,
+          outputLength: settings.outputLength,
+          includeNegativePrompt: settings.includeNegativePrompt,
+          preserveStyle: settings.preserveStyle,
         },
       });
 
@@ -67,26 +94,27 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         throw new Error(data.error);
       }
 
-      const expandedPrompt = data?.expandedPrompt;
+      const result = data?.result;
       
-      if (!expandedPrompt) {
+      if (!result) {
         throw new Error('No response from AI');
       }
       
       updateNodeData(props.id, {
-        prompt: expandedPrompt,
+        prompt: result.prompt || result,
+        negativePrompt: result.negativePrompt,
         isProcessing: false,
         isComplete: true,
       });
 
       toast({
-        title: "Prompt expanded",
+        title: `${modeConfig[currentMode].label} complete`,
         description: hasImageContext 
           ? "Your prompt has been enhanced with image analysis" 
-          : "Your creative prompt has been enhanced",
+          : "Your creative prompt has been processed",
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to expand prompt';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to process';
       updateNodeData(props.id, {
         error: errorMessage,
         isProcessing: false,
@@ -97,19 +125,27 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         variant: "destructive",
       });
     }
-  }, [props.id, getConnectedNodes, updateNodeData, toast]);
+  }, [props.id, getConnectedNodes, updateNodeData, toast, assistantSettings, currentMode]);
 
   const { inputs } = getConnectedNodes(props.id);
   const hasTextInput = inputs.some((n) => n.data.type === 'text');
   const hasReferenceInput = inputs.some((n) => n.data.type === 'reference');
   const referenceInput = inputs.find((n) => n.data.type === 'reference');
 
+  const creativityLabel = useMemo(() => {
+    const creativity = assistantSettings?.creativity || 70;
+    if (creativity < 30) return 'Conservative';
+    if (creativity < 60) return 'Balanced';
+    if (creativity < 80) return 'Creative';
+    return 'Wild';
+  }, [assistantSettings?.creativity]);
+
   return (
     <BaseNode
       {...props}
       icon={Sparkles}
       iconColor="text-secondary"
-      fixedDescription="AI-powered prompt expansion"
+      fixedDescription="AI-powered prompt processor"
       nodeCategory="processor"
       inputs={[
         { id: 'text-in', type: 'text', label: 'Text' },
@@ -118,6 +154,22 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
       outputs={[{ id: 'text-out', type: 'text' }]}
     >
       <div className="space-y-3">
+        {/* Mode & Settings Badge */}
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="outline" className={cn('gap-1 text-[10px]', modeConfig[currentMode].color)}>
+            <ModeIcon className="w-3 h-3" />
+            {modeConfig[currentMode].label}
+          </Badge>
+          <Badge variant="outline" className="text-[10px] bg-muted/50">
+            {assistantSettings?.tone || 'creative'}
+          </Badge>
+          <Badge variant="outline" className="text-[10px] bg-muted/50 gap-1">
+            <Zap className="w-2.5 h-2.5" />
+            {creativityLabel}
+          </Badge>
+        </div>
+
+        {/* Connected Inputs */}
         {(hasTextInput || hasReferenceInput) && (
           <div className="flex flex-wrap gap-1">
             {hasTextInput && (
@@ -141,7 +193,7 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         <Button
           onClick={(e) => {
             e.stopPropagation();
-            handleExpand();
+            handleProcess();
           }}
           disabled={isProcessing}
           className={cn(
@@ -150,14 +202,22 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
           )}
           variant="outline"
         >
-          <Wand2 className={cn('w-4 h-4', isProcessing && 'animate-spin')} />
-          {isProcessing ? 'Expanding...' : 'Expand Idea'}
+          <ModeIcon className={cn('w-4 h-4', isProcessing && 'animate-spin')} />
+          {isProcessing ? 'Processing...' : `${modeConfig[currentMode].label} Idea`}
         </Button>
 
+        {/* Output Display */}
         {prompt && (
-          <div className="p-3 rounded-lg bg-background/50 border border-border/50">
+          <div className="p-3 rounded-lg bg-background/50 border border-border/50 space-y-2">
             <p className="text-xs text-muted-foreground mb-1">Enhanced Prompt:</p>
             <p className="text-sm text-foreground/80 line-clamp-4">{prompt}</p>
+            
+            {negativePrompt && (
+              <>
+                <p className="text-xs text-muted-foreground mt-2">Negative Prompt:</p>
+                <p className="text-xs text-destructive/70 line-clamp-2">{negativePrompt}</p>
+              </>
+            )}
           </div>
         )}
 
