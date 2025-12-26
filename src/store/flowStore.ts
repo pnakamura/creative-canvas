@@ -13,6 +13,18 @@ import {
 export type NodeType = 'text' | 'assistant' | 'imageGenerator' | 'videoGenerator' | 'reference';
 export type NodeCategory = 'source' | 'processor' | 'generator';
 
+export type AssistantMode = 'expand' | 'analyze' | 'brainstorm' | 'refine' | 'freestyle';
+export type AssistantTone = 'creative' | 'professional' | 'casual' | 'dramatic' | 'minimal';
+
+export interface AssistantSettings {
+  mode: AssistantMode;
+  tone: AssistantTone;
+  creativity: number; // 0-100
+  outputLength: 'short' | 'medium' | 'long';
+  includeNegativePrompt: boolean;
+  preserveStyle: boolean;
+}
+
 export interface NodeData extends Record<string, unknown> {
   label: string;
   type: NodeType;
@@ -31,12 +43,16 @@ export interface NodeData extends Record<string, unknown> {
   assetType?: 'image' | 'pdf' | 'text' | 'link';
   fileName?: string;
   extractedText?: string;
+  // Image generator settings
   settings?: {
     seed?: number;
     aspectRatio?: string;
     guidanceScale?: number;
     steps?: number;
   };
+  // Assistant specific
+  assistantSettings?: AssistantSettings;
+  negativePrompt?: string;
 }
 
 export type FlowNode = Node<NodeData>;
@@ -108,6 +124,14 @@ const initialNodes: FlowNode[] = [
       type: 'assistant',
       category: 'processor',
       prompt: '',
+      assistantSettings: {
+        mode: 'expand',
+        tone: 'creative',
+        creativity: 70,
+        outputLength: 'medium',
+        includeNegativePrompt: false,
+        preserveStyle: false,
+      },
     },
   },
   {
