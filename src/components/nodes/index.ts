@@ -4,6 +4,11 @@ import { ImageGeneratorNode } from './ImageGeneratorNode';
 import { VideoGeneratorNode } from './VideoGeneratorNode';
 import { ReferenceNode } from './ReferenceNode';
 import { TextAnalyzerNode } from './TextAnalyzerNode';
+import { ReportGeneratorNode } from './ReportGeneratorNode';
+import { DocumentGeneratorNode } from './DocumentGeneratorNode';
+import { InfographicGeneratorNode } from './InfographicGeneratorNode';
+import { PresentationGeneratorNode } from './PresentationGeneratorNode';
+import { MindmapGeneratorNode } from './MindmapGeneratorNode';
 
 export const nodeTypes = {
   textNode: TextNode,
@@ -12,6 +17,23 @@ export const nodeTypes = {
   videoGeneratorNode: VideoGeneratorNode,
   referenceNode: ReferenceNode,
   textAnalyzerNode: TextAnalyzerNode,
+  reportGeneratorNode: ReportGeneratorNode,
+  documentGeneratorNode: DocumentGeneratorNode,
+  infographicGeneratorNode: InfographicGeneratorNode,
+  presentationGeneratorNode: PresentationGeneratorNode,
+  mindmapGeneratorNode: MindmapGeneratorNode,
 };
 
-export { TextNode, AssistantNode, ImageGeneratorNode, VideoGeneratorNode, ReferenceNode, TextAnalyzerNode };
+export { 
+  TextNode, 
+  AssistantNode, 
+  ImageGeneratorNode, 
+  VideoGeneratorNode, 
+  ReferenceNode, 
+  TextAnalyzerNode,
+  ReportGeneratorNode,
+  DocumentGeneratorNode,
+  InfographicGeneratorNode,
+  PresentationGeneratorNode,
+  MindmapGeneratorNode,
+};

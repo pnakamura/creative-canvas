@@ -10,8 +10,20 @@ import {
   EdgeChange,
 } from '@xyflow/react';
 
-export type NodeType = 'text' | 'assistant' | 'imageGenerator' | 'videoGenerator' | 'reference' | 'textAnalyzer';
-export type NodeCategory = 'source' | 'processor' | 'generator';
+export type NodeType = 
+  | 'text' 
+  | 'assistant' 
+  | 'imageGenerator' 
+  | 'videoGenerator' 
+  | 'reference' 
+  | 'textAnalyzer'
+  | 'reportGenerator'
+  | 'documentGenerator'
+  | 'infographicGenerator'
+  | 'presentationGenerator'
+  | 'mindmapGenerator';
+
+export type NodeCategory = 'source' | 'processor' | 'generator' | 'output';
 
 export type AssistantMode = 'expand' | 'analyze' | 'brainstorm' | 'refine' | 'freestyle';
 export type AssistantTone = 'creative' | 'professional' | 'casual' | 'dramatic' | 'minimal';
@@ -19,6 +31,11 @@ export type AssistantTone = 'creative' | 'professional' | 'casual' | 'dramatic' 
 export type AnalyzerOutputType = 'report' | 'document' | 'infographic' | 'presentation' | 'mindmap' | 'analysis' | 'comparison' | 'summary';
 export type AnalyzerDepth = 'brief' | 'standard' | 'detailed' | 'comprehensive';
 export type AnalyzerFormat = 'structured' | 'narrative' | 'bullet-points' | 'academic';
+
+// Output Generator Types
+export type OutputFormat = 'markdown' | 'html' | 'json' | 'plain';
+export type DocumentStyle = 'formal' | 'technical' | 'business' | 'academic' | 'creative';
+export type VisualizationTheme = 'modern' | 'minimal' | 'corporate' | 'creative' | 'dark';
 
 export interface AssistantSettings {
   mode: AssistantMode;
@@ -52,6 +69,69 @@ export interface AnalysisResultData {
   };
 }
 
+// Output Generator Settings
+export interface ReportSettings {
+  style: DocumentStyle;
+  includeExecutiveSummary: boolean;
+  includeTableOfContents: boolean;
+  includeCharts: boolean;
+  includeReferences: boolean;
+  maxSections: number;
+  language: string;
+}
+
+export interface DocumentSettings {
+  style: DocumentStyle;
+  format: OutputFormat;
+  includeHeader: boolean;
+  includeFooter: boolean;
+  includeSignature: boolean;
+  templateType: 'memo' | 'letter' | 'policy' | 'procedure' | 'contract' | 'custom';
+  language: string;
+}
+
+export interface InfographicSettings {
+  theme: VisualizationTheme;
+  layout: 'vertical' | 'horizontal' | 'grid' | 'timeline';
+  includeIcons: boolean;
+  includeStatistics: boolean;
+  colorScheme: 'auto' | 'monochrome' | 'complementary' | 'triadic';
+  maxElements: number;
+}
+
+export interface PresentationSettings {
+  theme: VisualizationTheme;
+  slidesCount: number;
+  includeImages: boolean;
+  includeCharts: boolean;
+  includeSpeakerNotes: boolean;
+  transitionStyle: 'none' | 'fade' | 'slide' | 'zoom';
+  aspectRatio: '16:9' | '4:3' | '1:1';
+}
+
+export interface MindmapSettings {
+  theme: VisualizationTheme;
+  maxDepth: number;
+  maxBranches: number;
+  includeDescriptions: boolean;
+  includeIcons: boolean;
+  layout: 'radial' | 'tree' | 'organic';
+  connectionStyle: 'curved' | 'straight' | 'angular';
+}
+
+// Output Data Types
+export interface GeneratedOutput {
+  content: string;
+  format: OutputFormat;
+  metadata?: {
+    title?: string;
+    sections?: number;
+    wordCount?: number;
+    generatedAt?: string;
+  };
+  preview?: string;
+}
+
 export interface NodeData extends Record<string, unknown> {
   label: string;
   type: NodeType;
@@ -83,6 +163,13 @@ export interface NodeData extends Record<string, unknown> {
   // Text Analyzer specific
   analyzerSettings?: AnalyzerSettings;
   analysisResult?: AnalysisResultData;
+  // Output generators specific
+  reportSettings?: ReportSettings;
+  documentSettings?: DocumentSettings;
+  infographicSettings?: InfographicSettings;
+  presentationSettings?: PresentationSettings;
+  mindmapSettings?: MindmapSettings;
+  generatedOutput?: GeneratedOutput;
 }
 
 export type FlowNode = Node<NodeData>;
@@ -115,6 +202,11 @@ const getNodeLabel = (type: NodeType): string => {
     case 'videoGenerator': return 'Video Generator';
     case 'reference': return 'Reference';
     case 'textAnalyzer': return 'Text Analyzer';
+    case 'reportGenerator': return 'Report Generator';
+    case 'documentGenerator': return 'Document Generator';
+    case 'infographicGenerator': return 'Infographic Generator';
+    case 'presentationGenerator': return 'Presentation Generator';
+    case 'mindmapGenerator': return 'Mindmap Generator';
     default: return 'Node';
   }
 };
@@ -130,6 +222,12 @@ const getNodeCategory = (type: NodeType): NodeCategory => {
     case 'imageGenerator':
     case 'videoGenerator':
       return 'generator';
+    case 'reportGenerator':
+    case 'documentGenerator':
+    case 'infographicGenerator':
+    case 'presentationGenerator':
+    case 'mindmapGenerator':
+      return 'output';
     default:
       return 'source';
   }
@@ -259,6 +357,30 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       videoGenerator: 'videoGeneratorNode',
       reference: 'referenceNode',
       textAnalyzer: 'textAnalyzerNode',
+      reportGenerator: 'reportGeneratorNode',
+      documentGenerator: 'documentGeneratorNode',
+      infographicGenerator: 'infographicGeneratorNode',
+      presentationGenerator: 'presentationGeneratorNode',
+      mindmapGenerator: 'mindmapGeneratorNode',
+    };
+
+    const getDefaultSettings = (nodeType: NodeType) => {
+      switch (nodeType) {
+        case 'imageGenerator':
+          return { settings: { aspectRatio: '1:1', guidanceScale: 7.5, steps: 30 } };
+        case 'reportGenerator':
+          return { reportSettings: { style: 'formal' as DocumentStyle, includeExecutiveSummary: true, includeTableOfContents: true, includeCharts: true, includeReferences: true, maxSections: 10, language: 'pt-BR' } };
+        case 'documentGenerator':
+          return { documentSettings: { style: 'business' as DocumentStyle, format: 'markdown' as OutputFormat, includeHeader: true, includeFooter: true, includeSignature: false, templateType: 'memo' as const, language: 'pt-BR' } };
+        case 'infographicGenerator':
+          return { infographicSettings: { theme: 'modern' as VisualizationTheme, layout: 'vertical' as const, includeIcons: true, includeStatistics: true, colorScheme: 'auto' as const, maxElements: 12 } };
+        case 'presentationGenerator':
+          return { presentationSettings: { theme: 'modern' as VisualizationTheme, slidesCount: 10, includeImages: true, includeCharts: true, includeSpeakerNotes: true, transitionStyle: 'fade' as const, aspectRatio: '16:9' as const } };
+        case 'mindmapGenerator':
+          return { mindmapSettings: { theme: 'modern' as VisualizationTheme, maxDepth: 4, maxBranches: 6, includeDescriptions: true, includeIcons: true, layout: 'radial' as const, connectionStyle: 'curved' as const } };
+        default:
+          return {};
+      }
     };
 
     const newNode: FlowNode = {
@@ -269,11 +391,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         label: getNodeLabel(type),
         type,
         category: getNodeCategory(type),
-        settings: type === 'imageGenerator' ? {
-          aspectRatio: '1:1',
-          guidanceScale: 7.5,
-          steps: 30,
-        } : undefined,
+        ...getDefaultSettings(type),
       },
     };
 

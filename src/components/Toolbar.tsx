@@ -10,6 +10,11 @@ import {
   Trash2,
   File,
   FileSearch,
+  FileText,
+  FileCheck,
+  BarChart3,
+  Presentation,
+  Network,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,6 +57,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
     { type: 'videoGenerator' as NodeType, label: 'Video Generator', icon: Video, color: 'text-accent' },
   ];
 
+  const outputNodes = [
+    { type: 'reportGenerator' as NodeType, label: 'Report Generator', icon: FileText, color: 'text-blue-400' },
+    { type: 'documentGenerator' as NodeType, label: 'Document Generator', icon: FileCheck, color: 'text-green-400' },
+    { type: 'infographicGenerator' as NodeType, label: 'Infographic Generator', icon: BarChart3, color: 'text-orange-400' },
+    { type: 'presentationGenerator' as NodeType, label: 'Presentation Generator', icon: Presentation, color: 'text-purple-400' },
+    { type: 'mindmapGenerator' as NodeType, label: 'Mindmap Generator', icon: Network, color: 'text-pink-400' },
+  ];
+
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
       <div className="glass-panel rounded-xl p-2 flex items-center gap-2">
@@ -62,7 +75,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
               <span className="hidden sm:inline">Add Node</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="glass-panel border-border/50 w-48" align="start">
+          <DropdownMenuContent className="glass-panel border-border/50 w-56 max-h-[70vh] overflow-y-auto" align="start">
             <DropdownMenuLabel className="text-muted-foreground text-xs uppercase tracking-wide">Sources</DropdownMenuLabel>
             <DropdownMenuGroup>
               {sourceNodes.map((option) => (
@@ -94,6 +107,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
             <DropdownMenuLabel className="text-muted-foreground text-xs uppercase tracking-wide">Generators</DropdownMenuLabel>
             <DropdownMenuGroup>
               {generatorNodes.map((option) => (
+                <DropdownMenuItem
+                  key={option.type}
+                  onClick={() => handleAddNode(option.type)}
+                  className="gap-2 cursor-pointer focus:bg-muted"
+                >
+                  <option.icon className={cn('w-4 h-4', option.color)} />
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="bg-border/50" />
+            <DropdownMenuLabel className="text-muted-foreground text-xs uppercase tracking-wide">Output</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              {outputNodes.map((option) => (
                 <DropdownMenuItem
                   key={option.type}
                   onClick={() => handleAddNode(option.type)}
