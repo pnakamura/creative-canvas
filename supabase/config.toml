@@ -12,11 +12,11 @@ verify_jwt = false
 [functions.text-analyzer]
 verify_jwt = false
 
-[functions.expand-prompt]
+[functions.generate-output]
 verify_jwt = false
 
-[functions.extract-text]
+[functions.chunk-text]
 verify_jwt = false
 
-[functions.ai-assistant]
+[functions.generate-embeddings]
 verify_jwt = false

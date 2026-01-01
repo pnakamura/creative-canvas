@@ -9,6 +9,8 @@ import { DocumentGeneratorNode } from './DocumentGeneratorNode';
 import { InfographicGeneratorNode } from './InfographicGeneratorNode';
 import { PresentationGeneratorNode } from './PresentationGeneratorNode';
 import { MindmapGeneratorNode } from './MindmapGeneratorNode';
+import { ChunkerNode } from './ChunkerNode';
+import { EmbeddingNode } from './EmbeddingNode';
 
 export const nodeTypes = {
   textNode: TextNode,
@@ -22,6 +24,8 @@ export const nodeTypes = {
   infographicGeneratorNode: InfographicGeneratorNode,
   presentationGeneratorNode: PresentationGeneratorNode,
   mindmapGeneratorNode: MindmapGeneratorNode,
+  chunkerNode: ChunkerNode,
+  embeddingNode: EmbeddingNode,
 };
 
 export { 
@@ -36,4 +40,6 @@ export {
   InfographicGeneratorNode,
   PresentationGeneratorNode,
   MindmapGeneratorNode,
+  ChunkerNode,
+  EmbeddingNode,
 };
