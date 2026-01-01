@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      document_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          document_id: string
+          document_name: string | null
+          embedding: string | null
+          id: string
+          knowledge_base_id: string | null
+          metadata: Json | null
+          token_count: number | null
+          user_id: string
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          document_id: string
+          document_name?: string | null
+          embedding?: string | null
+          id?: string
+          knowledge_base_id?: string | null
+          metadata?: Json | null
+          token_count?: number | null
+          user_id: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          document_id?: string
+          document_name?: string | null
+          embedding?: string | null
+          id?: string
+          knowledge_base_id?: string | null
+          metadata?: Json | null
+          token_count?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_chunks_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_bases: {
+        Row: {
+          chunk_count: number | null
+          created_at: string
+          description: string | null
+          document_count: number | null
+          id: string
+          metadata: Json | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chunk_count?: number | null
+          created_at?: string
+          description?: string | null
+          document_count?: number | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chunk_count?: number | null
+          created_at?: string
+          description?: string | null
+          document_count?: number | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -147,12 +233,69 @@ export type Database = {
         }
         Relationships: []
       }
+      query_history: {
+        Row: {
+          created_at: string
+          id: string
+          knowledge_base_id: string | null
+          query: string
+          query_embedding: string | null
+          result_count: number | null
+          results: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          knowledge_base_id?: string | null
+          query: string
+          query_embedding?: string | null
+          result_count?: number | null
+          results?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          knowledge_base_id?: string | null
+          query?: string
+          query_embedding?: string | null
+          result_count?: number | null
+          results?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "query_history_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_documents: {
+        Args: {
+          filter_knowledge_base_id?: string
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          chunk_index: number
+          content: string
+          document_id: string
+          document_name: string
+          id: string
+          metadata: Json
+          similarity: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
