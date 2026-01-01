@@ -21,7 +21,9 @@ export type NodeType =
   | 'documentGenerator'
   | 'infographicGenerator'
   | 'presentationGenerator'
-  | 'mindmapGenerator';
+  | 'mindmapGenerator'
+  | 'chunker'
+  | 'embedding';
 
 export type NodeCategory = 'source' | 'processor' | 'generator' | 'output';
 
@@ -119,6 +121,25 @@ export interface MindmapSettings {
   connectionStyle: 'curved' | 'straight' | 'angular';
 }
 
+// RAG Pipeline Settings
+export type ChunkStrategy = 'sentence' | 'paragraph' | 'fixed' | 'semantic';
+export type EmbeddingModel = 'text-embedding-3-small' | 'text-embedding-3-large' | 'text-embedding-ada-002';
+
+export interface ChunkerSettings {
+  strategy: ChunkStrategy;
+  chunkSize: number; // in tokens
+  overlap: number; // in tokens
+  preserveSentences: boolean;
+}
+
+export interface EmbeddingSettings {
+  model: EmbeddingModel;
+  dimensions: number;
+  batchSize: number;
+  storeInDb: boolean;
+  knowledgeBaseId?: string;
+}
+
 // Output Data Types
 export interface GeneratedOutput {
   content: string;
@@ -170,6 +191,12 @@ export interface NodeData extends Record<string, unknown> {
   presentationSettings?: PresentationSettings;
   mindmapSettings?: MindmapSettings;
   generatedOutput?: GeneratedOutput;
+  // RAG Pipeline specific
+  chunkerSettings?: ChunkerSettings;
+  embeddingSettings?: EmbeddingSettings;
+  chunks?: Array<{ content: string; index: number; tokenCount: number }>;
+  chunkCount?: number;
+  embeddingResult?: { embeddings: number[][]; storedCount: number; dimensions: number };
 }
 
 export type FlowNode = Node<NodeData>;
@@ -207,6 +234,8 @@ const getNodeLabel = (type: NodeType): string => {
     case 'infographicGenerator': return 'Infographic Generator';
     case 'presentationGenerator': return 'Presentation Generator';
     case 'mindmapGenerator': return 'Mindmap Generator';
+    case 'chunker': return 'Chunker';
+    case 'embedding': return 'Embedding';
     default: return 'Node';
   }
 };
@@ -218,6 +247,8 @@ const getNodeCategory = (type: NodeType): NodeCategory => {
       return 'source';
     case 'assistant':
     case 'textAnalyzer':
+    case 'chunker':
+    case 'embedding':
       return 'processor';
     case 'imageGenerator':
     case 'videoGenerator':
@@ -362,6 +393,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       infographicGenerator: 'infographicGeneratorNode',
       presentationGenerator: 'presentationGeneratorNode',
       mindmapGenerator: 'mindmapGeneratorNode',
+      chunker: 'chunkerNode',
+      embedding: 'embeddingNode',
     };
 
     const getDefaultSettings = (nodeType: NodeType) => {
@@ -378,6 +411,10 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           return { presentationSettings: { theme: 'modern' as VisualizationTheme, slidesCount: 10, includeImages: true, includeCharts: true, includeSpeakerNotes: true, transitionStyle: 'fade' as const, aspectRatio: '16:9' as const } };
         case 'mindmapGenerator':
           return { mindmapSettings: { theme: 'modern' as VisualizationTheme, maxDepth: 4, maxBranches: 6, includeDescriptions: true, includeIcons: true, layout: 'radial' as const, connectionStyle: 'curved' as const } };
+        case 'chunker':
+          return { chunkerSettings: { strategy: 'paragraph' as const, chunkSize: 500, overlap: 50, preserveSentences: true } };
+        case 'embedding':
+          return { embeddingSettings: { model: 'text-embedding-3-small' as const, dimensions: 1536, batchSize: 100, storeInDb: true } };
         default:
           return {};
       }
