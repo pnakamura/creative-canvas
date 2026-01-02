@@ -27,7 +27,14 @@ export type NodeType =
   | 'retriever'
   | 'contextAssembler'
   | 'vectorStore'
-  | 'fileUpload';
+  | 'fileUpload'
+  | 'apiConnector';
+
+// API Connector Types
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type BodyType = 'none' | 'json' | 'form' | 'raw';
+export type ApiAuthType = 'none' | 'bearer' | 'apiKey' | 'basic' | 'custom';
+export type ApiKeyLocation = 'header' | 'query';
 
 export type NodeCategory = 'source' | 'processor' | 'generator' | 'output';
 
@@ -191,6 +198,45 @@ export interface FileUploadData {
   };
 }
 
+// API Connector Settings
+export interface ApiConnectorSettings {
+  method: HttpMethod;
+  url: string;
+  bodyType: BodyType;
+  timeout: number;
+  authType: ApiAuthType;
+  bearerToken?: string;
+  apiKeyName?: string;
+  apiKeyValue?: string;
+  apiKeyLocation?: ApiKeyLocation;
+  basicUsername?: string;
+  basicPassword?: string;
+  headers: Array<{ key: string; value: string; enabled: boolean }>;
+  queryParams: Array<{ key: string; value: string; enabled: boolean }>;
+  followRedirects: boolean;
+  validateSSL: boolean;
+  retryOnFail: boolean;
+  retryCount: number;
+}
+
+export interface ApiConnectorData {
+  requestBody?: string | Record<string, unknown>;
+  response?: {
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    data: unknown;
+    duration: number;
+  };
+  requestHistory?: Array<{
+    timestamp: string;
+    method: HttpMethod;
+    url: string;
+    status: number;
+    duration: number;
+  }>;
+}
+
 // Output Data Types
 export interface GeneratedOutput {
   content: string;
@@ -263,6 +309,9 @@ export interface NodeData extends Record<string, unknown> {
   // FileUpload specific
   fileUploadSettings?: FileUploadSettings;
   fileUploadData?: FileUploadData;
+  // API Connector specific
+  apiConnectorSettings?: ApiConnectorSettings;
+  apiConnectorData?: ApiConnectorData;
 }
 
 export type FlowNode = Node<NodeData>;
@@ -308,6 +357,7 @@ const getNodeLabel = (type: NodeType): string => {
     case 'contextAssembler': return 'Context Assembler';
     case 'vectorStore': return 'Vector Store';
     case 'fileUpload': return 'File Upload';
+    case 'apiConnector': return 'API Connector';
     default: return 'Node';
   }
 };
@@ -325,6 +375,7 @@ const getNodeCategory = (type: NodeType): NodeCategory => {
     case 'embedding':
     case 'retriever':
     case 'contextAssembler':
+    case 'apiConnector':
       return 'processor';
     case 'imageGenerator':
     case 'videoGenerator':
@@ -493,6 +544,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       contextAssembler: 'contextAssemblerNode',
       vectorStore: 'vectorStoreNode',
       fileUpload: 'fileUploadNode',
+      apiConnector: 'apiConnectorNode',
     };
 
     const getDefaultSettings = (nodeType: NodeType) => {
@@ -521,6 +573,22 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           return { vectorStoreSettings: { showChunkPreview: true, maxPreviewChunks: 3, sortBy: 'date' as const, sortOrder: 'desc' as const, autoRefresh: false } };
         case 'fileUpload':
           return { fileUploadSettings: { autoExtract: true, maxFileSize: 20, preserveFormatting: true, extractMetadata: true } };
+        case 'apiConnector':
+          return { 
+            apiConnectorSettings: { 
+              method: 'GET' as const, 
+              url: '', 
+              bodyType: 'none' as const, 
+              timeout: 30, 
+              authType: 'none' as const, 
+              headers: [], 
+              queryParams: [], 
+              followRedirects: true, 
+              validateSSL: true, 
+              retryOnFail: false, 
+              retryCount: 3 
+            } 
+          };
         default:
           return {};
       }
