@@ -23,7 +23,9 @@ export const RetrieverNode: React.FC<NodeProps> = (props) => {
     try {
       const { inputs } = getConnectedNodes(props.id);
       let query = nodeData.query || '';
+      let knowledgeBaseId = settings.knowledgeBaseId;
       
+      // Get query from connected text nodes
       for (const input of inputs) {
         const inputData = input.data as NodeData;
         if (inputData.content) {
@@ -32,6 +34,16 @@ export const RetrieverNode: React.FC<NodeProps> = (props) => {
         }
         if (inputData.prompt) {
           query = inputData.prompt;
+          break;
+        }
+      }
+
+      // Get knowledge base ID from connected VectorStore node
+      for (const input of inputs) {
+        const inputData = input.data as NodeData;
+        if (inputData.type === 'vectorStore' && inputData.selectedKnowledgeBaseId) {
+          knowledgeBaseId = inputData.selectedKnowledgeBaseId as string;
+          console.log('Using KB from VectorStore:', knowledgeBaseId);
           break;
         }
       }
@@ -45,7 +57,7 @@ export const RetrieverNode: React.FC<NodeProps> = (props) => {
           query,
           topK: settings.topK,
           threshold: settings.threshold,
-          knowledgeBaseId: settings.knowledgeBaseId,
+          knowledgeBaseId: knowledgeBaseId,
         },
       });
 
