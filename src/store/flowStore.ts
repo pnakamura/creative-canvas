@@ -158,6 +158,14 @@ export interface ContextAssemblerSettings {
   format: ContextFormat;
 }
 
+export interface VectorStoreSettings {
+  showChunkPreview: boolean;
+  maxPreviewChunks: number;
+  sortBy: 'date' | 'name' | 'chunks';
+  sortOrder: 'asc' | 'desc';
+  autoRefresh: boolean;
+}
+
 // Output Data Types
 export interface GeneratedOutput {
   content: string;
@@ -214,6 +222,7 @@ export interface NodeData extends Record<string, unknown> {
   embeddingSettings?: EmbeddingSettings;
   retrieverSettings?: RetrieverSettings;
   contextAssemblerSettings?: ContextAssemblerSettings;
+  vectorStoreSettings?: VectorStoreSettings;
   chunks?: Array<{ content: string; index: number; tokenCount: number }>;
   chunkCount?: number;
   embeddingResult?: { embeddings: number[][]; storedCount: number; dimensions: number };
@@ -222,6 +231,10 @@ export interface NodeData extends Record<string, unknown> {
   retrievalMetadata?: { query: string; topK: number; threshold: number; totalFound: number };
   assembledContext?: string;
   contextMetadata?: { documentsIncluded: number; totalDocuments: number; estimatedTokens: number; format: string };
+  // VectorStore specific
+  selectedKnowledgeBaseId?: string;
+  knowledgeBaseCount?: number;
+  documentChunks?: Array<{ id: string; document_id: string; document_name: string | null; chunk_index: number; content: string; token_count: number | null }>;
 }
 
 export type FlowNode = Node<NodeData>;
@@ -471,6 +484,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           return { retrieverSettings: { topK: 5, threshold: 0.7 } };
         case 'contextAssembler':
           return { contextAssemblerSettings: { maxTokens: 4000, includeMetadata: true, separator: '\n\n---\n\n', format: 'structured' as const } };
+        case 'vectorStore':
+          return { vectorStoreSettings: { showChunkPreview: true, maxPreviewChunks: 3, sortBy: 'date' as const, sortOrder: 'desc' as const, autoRefresh: false } };
         default:
           return {};
       }
