@@ -257,6 +257,8 @@ interface FlowState {
   deleteNode: (nodeId: string) => void;
   setExecuting: (isExecuting: boolean) => void;
   getConnectedNodes: (nodeId: string) => { inputs: FlowNode[]; outputs: FlowNode[] };
+  loadRagPipelineTemplate: () => void;
+  clearCanvas: () => void;
 }
 
 const getNodeLabel = (type: NodeType): string => {
@@ -548,5 +550,198 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       .filter(Boolean) as FlowNode[];
 
     return { inputs, outputs };
+  },
+
+  clearCanvas: () => {
+    set({ nodes: [], edges: [], selectedNodeId: null });
+  },
+
+  loadRagPipelineTemplate: () => {
+    const timestamp = Date.now();
+    const baseX = 100;
+    const baseY = 150;
+    const xSpacing = 280;
+    const yOffset = 80;
+
+    // RAG Pipeline nodes
+    const templateNodes: FlowNode[] = [
+      // Input branch
+      {
+        id: `text-${timestamp}`,
+        type: 'textNode',
+        position: { x: baseX, y: baseY },
+        data: {
+          label: 'Source Text',
+          type: 'text',
+          category: 'source',
+          content: '',
+          userDescription: 'Enter your source documents or text here',
+        },
+      },
+      {
+        id: `chunker-${timestamp}`,
+        type: 'chunkerNode',
+        position: { x: baseX + xSpacing, y: baseY },
+        data: {
+          label: 'Chunker',
+          type: 'chunker',
+          category: 'processor',
+          userDescription: 'Splits text into manageable chunks',
+          chunkerSettings: {
+            strategy: 'paragraph',
+            chunkSize: 500,
+            overlap: 50,
+            preserveSentences: true,
+          },
+        },
+      },
+      {
+        id: `embedding-${timestamp}`,
+        type: 'embeddingNode',
+        position: { x: baseX + xSpacing * 2, y: baseY },
+        data: {
+          label: 'Embedding',
+          type: 'embedding',
+          category: 'processor',
+          userDescription: 'Generates vector embeddings for chunks',
+          embeddingSettings: {
+            model: 'text-embedding-3-small',
+            dimensions: 1536,
+            batchSize: 100,
+            storeInDb: true,
+          },
+        },
+      },
+      {
+        id: `vectorStore-${timestamp}`,
+        type: 'vectorStoreNode',
+        position: { x: baseX + xSpacing * 3, y: baseY - yOffset },
+        data: {
+          label: 'Vector Store',
+          type: 'vectorStore',
+          category: 'source',
+          userDescription: 'Stores and manages embeddings',
+          vectorStoreSettings: {
+            showChunkPreview: true,
+            maxPreviewChunks: 3,
+            sortBy: 'date',
+            sortOrder: 'desc',
+            autoRefresh: false,
+          },
+        },
+      },
+      // Retrieval branch
+      {
+        id: `retriever-${timestamp}`,
+        type: 'retrieverNode',
+        position: { x: baseX + xSpacing * 4, y: baseY },
+        data: {
+          label: 'Retriever',
+          type: 'retriever',
+          category: 'processor',
+          userDescription: 'Finds relevant documents via semantic search',
+          retrieverSettings: {
+            topK: 5,
+            threshold: 0.7,
+          },
+        },
+      },
+      {
+        id: `contextAssembler-${timestamp}`,
+        type: 'contextAssemblerNode',
+        position: { x: baseX + xSpacing * 5, y: baseY },
+        data: {
+          label: 'Context Assembler',
+          type: 'contextAssembler',
+          category: 'processor',
+          userDescription: 'Assembles context for the AI assistant',
+          contextAssemblerSettings: {
+            maxTokens: 4000,
+            includeMetadata: true,
+            separator: '\n\n---\n\n',
+            format: 'structured',
+          },
+        },
+      },
+      {
+        id: `assistant-${timestamp}`,
+        type: 'assistantNode',
+        position: { x: baseX + xSpacing * 6, y: baseY },
+        data: {
+          label: 'RAG Assistant',
+          type: 'assistant',
+          category: 'processor',
+          userDescription: 'AI assistant with RAG context',
+          assistantSettings: {
+            mode: 'freestyle',
+            tone: 'professional',
+            creativity: 50,
+            outputLength: 'medium',
+            includeNegativePrompt: false,
+            preserveStyle: false,
+          },
+        },
+      },
+      // Query input
+      {
+        id: `query-${timestamp}`,
+        type: 'textNode',
+        position: { x: baseX + xSpacing * 3, y: baseY + yOffset * 2 },
+        data: {
+          label: 'Query Input',
+          type: 'text',
+          category: 'source',
+          content: '',
+          userDescription: 'Enter your search query here',
+        },
+      },
+    ];
+
+    // RAG Pipeline edges
+    const templateEdges: Edge[] = [
+      // Indexing pipeline
+      {
+        id: `e-text-chunker-${timestamp}`,
+        source: `text-${timestamp}`,
+        target: `chunker-${timestamp}`,
+      },
+      {
+        id: `e-chunker-embedding-${timestamp}`,
+        source: `chunker-${timestamp}`,
+        target: `embedding-${timestamp}`,
+      },
+      {
+        id: `e-embedding-vectorStore-${timestamp}`,
+        source: `embedding-${timestamp}`,
+        target: `vectorStore-${timestamp}`,
+      },
+      // Retrieval pipeline
+      {
+        id: `e-vectorStore-retriever-${timestamp}`,
+        source: `vectorStore-${timestamp}`,
+        target: `retriever-${timestamp}`,
+      },
+      {
+        id: `e-query-retriever-${timestamp}`,
+        source: `query-${timestamp}`,
+        target: `retriever-${timestamp}`,
+      },
+      {
+        id: `e-retriever-contextAssembler-${timestamp}`,
+        source: `retriever-${timestamp}`,
+        target: `contextAssembler-${timestamp}`,
+      },
+      {
+        id: `e-contextAssembler-assistant-${timestamp}`,
+        source: `contextAssembler-${timestamp}`,
+        target: `assistant-${timestamp}`,
+      },
+    ];
+
+    set({
+      nodes: templateNodes,
+      edges: templateEdges,
+      selectedNodeId: null,
+    });
   },
 }));
