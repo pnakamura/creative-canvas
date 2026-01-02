@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Settings2, Type, Sparkles, Image, Video, FileText, Wand2, Brain, Lightbulb, Pencil, MessageSquare, FileSearch, BarChart3, Presentation, Network, FileCheck, GitCompare, BookOpen, FileSpreadsheet } from 'lucide-react';
+import { X, Settings2, Type, Sparkles, Image, Video, FileText, Wand2, Brain, Lightbulb, Pencil, MessageSquare, FileSearch, BarChart3, Presentation, Network, FileCheck, GitCompare, BookOpen, FileSpreadsheet, Search, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings } from '@/store/flowStore';
+import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings, RetrieverSettings, ContextAssemblerSettings, ContextFormat } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +57,12 @@ const analyzerFormatOptions: { value: AnalyzerFormat; label: string }[] = [
   { value: 'narrative', label: 'Narrative (Prose)' },
   { value: 'bullet-points', label: 'Bullet Points' },
   { value: 'academic', label: 'Academic' },
+];
+
+const contextFormatOptions: { value: ContextFormat; label: string; description: string }[] = [
+  { value: 'structured', label: 'Structured', description: 'Numbered with headers' },
+  { value: 'concatenated', label: 'Concatenated', description: 'Simple text blocks' },
+  { value: 'markdown', label: 'Markdown', description: 'Formatted with markdown' },
 ];
 
 export const PropertiesSidebar: React.FC = () => {
@@ -140,6 +146,36 @@ export const PropertiesSidebar: React.FC = () => {
     });
   };
 
+  const handleRetrieverSettingsChange = (key: keyof RetrieverSettings, value: any) => {
+    const currentSettings: RetrieverSettings = data.retrieverSettings || {
+      topK: 5,
+      threshold: 0.7,
+    };
+    
+    updateNodeData(selectedNodeId!, {
+      retrieverSettings: {
+        ...currentSettings,
+        [key]: value,
+      },
+    });
+  };
+
+  const handleContextAssemblerSettingsChange = (key: keyof ContextAssemblerSettings, value: any) => {
+    const currentSettings: ContextAssemblerSettings = data.contextAssemblerSettings || {
+      maxTokens: 4000,
+      includeMetadata: true,
+      separator: '\n\n---\n\n',
+      format: 'structured',
+    };
+    
+    updateNodeData(selectedNodeId!, {
+      contextAssemblerSettings: {
+        ...currentSettings,
+        [key]: value,
+      },
+    });
+  };
+
   const assistantSettings: AssistantSettings = data.assistantSettings || {
     mode: 'expand',
     tone: 'creative',
@@ -157,6 +193,18 @@ export const PropertiesSidebar: React.FC = () => {
     includeRecommendations: true,
     language: 'pt-BR',
     focusAreas: [],
+  };
+
+  const retrieverSettings: RetrieverSettings = data.retrieverSettings || {
+    topK: 5,
+    threshold: 0.7,
+  };
+
+  const contextAssemblerSettings: ContextAssemblerSettings = data.contextAssemblerSettings || {
+    maxTokens: 4000,
+    includeMetadata: true,
+    separator: '\n\n---\n\n',
+    format: 'structured',
   };
 
   const creativityLabel = () => {
@@ -568,6 +616,171 @@ export const PropertiesSidebar: React.FC = () => {
                   value={data.settings.seed || ''}
                   onChange={(e) => handleSettingsChange('seed', e.target.value ? parseInt(e.target.value) : undefined)}
                   className="bg-background/50 border-border/50"
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Retriever Settings */}
+        {data.type === 'retriever' && (
+          <>
+            <Separator className="bg-border/50" />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Search className="w-4 h-4 text-orange-400" />
+                Retriever Settings
+              </h3>
+
+              {/* Top K */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Top K (Documents)
+                  </Label>
+                  <span className="text-sm font-mono text-foreground">
+                    {retrieverSettings.topK}
+                  </span>
+                </div>
+                <Slider
+                  value={[retrieverSettings.topK]}
+                  onValueChange={([value]) => handleRetrieverSettingsChange('topK', value)}
+                  min={1}
+                  max={20}
+                  step={1}
+                  className="py-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Number of most similar documents to retrieve
+                </p>
+              </div>
+
+              {/* Similarity Threshold */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Similarity Threshold
+                  </Label>
+                  <span className="text-sm font-mono text-foreground">
+                    {(retrieverSettings.threshold * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <Slider
+                  value={[retrieverSettings.threshold * 100]}
+                  onValueChange={([value]) => handleRetrieverSettingsChange('threshold', value / 100)}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="py-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum similarity score for retrieved documents
+                </p>
+              </div>
+
+              {/* Knowledge Base ID */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Knowledge Base ID (Optional)
+                </Label>
+                <Input
+                  placeholder="Leave empty to search all"
+                  value={retrieverSettings.knowledgeBaseId || ''}
+                  onChange={(e) => handleRetrieverSettingsChange('knowledgeBaseId', e.target.value || undefined)}
+                  className="bg-background/50 border-border/50 font-mono text-sm"
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Context Assembler Settings */}
+        {data.type === 'contextAssembler' && (
+          <>
+            <Separator className="bg-border/50" />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Layers className="w-4 h-4 text-teal-400" />
+                Context Assembler Settings
+              </h3>
+
+              {/* Max Tokens */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Max Tokens
+                  </Label>
+                  <span className="text-sm font-mono text-foreground">
+                    {contextAssemblerSettings.maxTokens}
+                  </span>
+                </div>
+                <Slider
+                  value={[contextAssemblerSettings.maxTokens]}
+                  onValueChange={([value]) => handleContextAssemblerSettingsChange('maxTokens', value)}
+                  min={500}
+                  max={16000}
+                  step={500}
+                  className="py-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum token count for assembled context
+                </p>
+              </div>
+
+              {/* Format */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Output Format
+                </Label>
+                <Select
+                  value={contextAssemblerSettings.format}
+                  onValueChange={(value: ContextFormat) => handleContextAssemblerSettingsChange('format', value)}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    {contextFormatOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium">{opt.label}</div>
+                            <div className="text-xs text-muted-foreground">{opt.description}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Separator */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Document Separator
+                </Label>
+                <Input
+                  value={contextAssemblerSettings.separator}
+                  onChange={(e) => handleContextAssemblerSettingsChange('separator', e.target.value)}
+                  className="bg-background/50 border-border/50 font-mono text-sm"
+                />
+              </div>
+
+              <Separator className="bg-border/50" />
+
+              {/* Include Metadata Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-foreground">Include Metadata</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Add document source and similarity info
+                  </p>
+                </div>
+                <Switch
+                  checked={contextAssemblerSettings.includeMetadata}
+                  onCheckedChange={(checked) => handleContextAssemblerSettingsChange('includeMetadata', checked)}
                 />
               </div>
             </div>
