@@ -19,6 +19,7 @@ import {
   Binary,
   Search,
   Layers,
+  Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,6 +50,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
   const sourceNodes = [
     { type: 'text' as NodeType, label: 'Text Input', icon: Type, color: 'text-green-400' },
     { type: 'reference' as NodeType, label: 'Reference', icon: File, color: 'text-green-400' },
+    { type: 'vectorStore' as NodeType, label: 'Vector Store', icon: Database, color: 'text-teal-400' },
   ];
 
   const processorNodes = [

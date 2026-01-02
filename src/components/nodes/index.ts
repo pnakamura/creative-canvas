@@ -13,6 +13,7 @@ import { ChunkerNode } from './ChunkerNode';
 import { EmbeddingNode } from './EmbeddingNode';
 import { RetrieverNode } from './RetrieverNode';
 import { ContextAssemblerNode } from './ContextAssemblerNode';
+import { VectorStoreNode } from './VectorStoreNode';
 
 export const nodeTypes = {
   textNode: TextNode,
@@ -30,6 +31,7 @@ export const nodeTypes = {
   embeddingNode: EmbeddingNode,
   retrieverNode: RetrieverNode,
   contextAssemblerNode: ContextAssemblerNode,
+  vectorStoreNode: VectorStoreNode,
 };
 
 export { 
@@ -48,4 +50,5 @@ export {
   EmbeddingNode,
   RetrieverNode,
   ContextAssemblerNode,
+  VectorStoreNode,
 };
