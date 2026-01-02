@@ -1,0 +1,1 @@
+export { ValidatedEdge } from './ValidatedEdge';

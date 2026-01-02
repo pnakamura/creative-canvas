@@ -5,7 +5,13 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
-  :root {
+:root {
+  /* Edge validation colors */
+  --edge-valid: 142 71% 45%;
+  --edge-warning: 38 92% 50%;
+  --edge-invalid: 0 84% 60%;
+  --edge-rag: 262 83% 58%;
+
     --background: 222 47% 6%;
     --foreground: 210 40% 96%;
 
