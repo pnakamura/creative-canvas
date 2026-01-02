@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings, RetrieverSettings, ContextAssemblerSettings, ContextFormat, ChunkerSettings, ChunkStrategy, EmbeddingSettings, EmbeddingModel } from '@/store/flowStore';
+import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings, RetrieverSettings, ContextAssemblerSettings, ContextFormat, ChunkerSettings, ChunkStrategy, EmbeddingSettings, EmbeddingModel, VectorStoreSettings } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +76,12 @@ const embeddingModelOptions: { value: EmbeddingModel; label: string; dimensions:
   { value: 'text-embedding-3-small', label: 'Small (Fast)', dimensions: 1536 },
   { value: 'text-embedding-3-large', label: 'Large (Accurate)', dimensions: 3072 },
   { value: 'text-embedding-ada-002', label: 'Ada-002 (Legacy)', dimensions: 1536 },
+];
+
+const vectorStoreSortOptions: { value: 'date' | 'name' | 'chunks'; label: string }[] = [
+  { value: 'date', label: 'Last Updated' },
+  { value: 'name', label: 'Name' },
+  { value: 'chunks', label: 'Chunk Count' },
 ];
 
 export const PropertiesSidebar: React.FC = () => {
@@ -221,6 +227,23 @@ export const PropertiesSidebar: React.FC = () => {
     });
   };
 
+  const handleVectorStoreSettingsChange = (key: keyof VectorStoreSettings, value: any) => {
+    const currentSettings: VectorStoreSettings = data.vectorStoreSettings || {
+      showChunkPreview: true,
+      maxPreviewChunks: 3,
+      sortBy: 'date',
+      sortOrder: 'desc',
+      autoRefresh: false,
+    };
+    
+    updateNodeData(selectedNodeId!, {
+      vectorStoreSettings: {
+        ...currentSettings,
+        [key]: value,
+      },
+    });
+  };
+
   const assistantSettings: AssistantSettings = data.assistantSettings || {
     mode: 'expand',
     tone: 'creative',
@@ -264,6 +287,14 @@ export const PropertiesSidebar: React.FC = () => {
     dimensions: 1536,
     batchSize: 100,
     storeInDb: true,
+  };
+
+  const vectorStoreSettings: VectorStoreSettings = data.vectorStoreSettings || {
+    showChunkPreview: true,
+    maxPreviewChunks: 3,
+    sortBy: 'date',
+    sortOrder: 'desc',
+    autoRefresh: false,
   };
 
   const creativityLabel = () => {
@@ -1046,6 +1077,139 @@ export const PropertiesSidebar: React.FC = () => {
                   onCheckedChange={(checked) => handleContextAssemblerSettingsChange('includeMetadata', checked)}
                 />
               </div>
+            </div>
+          </>
+        )}
+
+        {/* Vector Store Settings */}
+        {data.type === 'vectorStore' && (
+          <>
+            <Separator className="bg-border/50" />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Database className="w-4 h-4 text-teal-400" />
+                Vector Store Settings
+              </h3>
+
+              {/* Sort By */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Sort By
+                </Label>
+                <Select
+                  value={vectorStoreSettings.sortBy}
+                  onValueChange={(value: 'date' | 'name' | 'chunks') => handleVectorStoreSettingsChange('sortBy', value)}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    {vectorStoreSortOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort Order */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Sort Order
+                </Label>
+                <Select
+                  value={vectorStoreSettings.sortOrder}
+                  onValueChange={(value: 'asc' | 'desc') => handleVectorStoreSettingsChange('sortOrder', value)}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    <SelectItem value="desc">Descending (Newest First)</SelectItem>
+                    <SelectItem value="asc">Ascending (Oldest First)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Max Preview Chunks */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Preview Chunks
+                  </Label>
+                  <span className="text-sm font-medium text-foreground">
+                    {vectorStoreSettings.maxPreviewChunks}
+                  </span>
+                </div>
+                <Slider
+                  value={[vectorStoreSettings.maxPreviewChunks]}
+                  onValueChange={([value]) => handleVectorStoreSettingsChange('maxPreviewChunks', value)}
+                  min={1}
+                  max={10}
+                  step={1}
+                  className="py-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Number of chunk previews to show per document
+                </p>
+              </div>
+
+              <Separator className="bg-border/50" />
+
+              {/* Show Chunk Preview Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-foreground">Show Chunk Preview</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Display content previews for chunks
+                  </p>
+                </div>
+                <Switch
+                  checked={vectorStoreSettings.showChunkPreview}
+                  onCheckedChange={(checked) => handleVectorStoreSettingsChange('showChunkPreview', checked)}
+                />
+              </div>
+
+              {/* Auto Refresh Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-foreground">Auto Refresh</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically refresh knowledge base list
+                  </p>
+                </div>
+                <Switch
+                  checked={vectorStoreSettings.autoRefresh}
+                  onCheckedChange={(checked) => handleVectorStoreSettingsChange('autoRefresh', checked)}
+                />
+              </div>
+
+              {/* Selected KB Info */}
+              {data.selectedKnowledgeBaseId && (
+                <>
+                  <Separator className="bg-border/50" />
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                      Selected Knowledge Base
+                    </Label>
+                    <div className="p-2 rounded-md bg-teal-500/10 border border-teal-500/30">
+                      <p className="text-xs text-teal-400 font-mono truncate">
+                        {data.selectedKnowledgeBaseId as string}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {(data.knowledgeBaseCount as number) || 0} KBs available
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {(data.chunkCount as number) || 0} chunks loaded
+                      </Badge>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}
