@@ -23,7 +23,9 @@ export type NodeType =
   | 'presentationGenerator'
   | 'mindmapGenerator'
   | 'chunker'
-  | 'embedding';
+  | 'embedding'
+  | 'retriever'
+  | 'contextAssembler';
 
 export type NodeCategory = 'source' | 'processor' | 'generator' | 'output';
 
@@ -140,6 +142,21 @@ export interface EmbeddingSettings {
   knowledgeBaseId?: string;
 }
 
+export interface RetrieverSettings {
+  topK: number;
+  threshold: number;
+  knowledgeBaseId?: string;
+}
+
+export type ContextFormat = 'structured' | 'concatenated' | 'markdown';
+
+export interface ContextAssemblerSettings {
+  maxTokens: number;
+  includeMetadata: boolean;
+  separator: string;
+  format: ContextFormat;
+}
+
 // Output Data Types
 export interface GeneratedOutput {
   content: string;
@@ -194,9 +211,16 @@ export interface NodeData extends Record<string, unknown> {
   // RAG Pipeline specific
   chunkerSettings?: ChunkerSettings;
   embeddingSettings?: EmbeddingSettings;
+  retrieverSettings?: RetrieverSettings;
+  contextAssemblerSettings?: ContextAssemblerSettings;
   chunks?: Array<{ content: string; index: number; tokenCount: number }>;
   chunkCount?: number;
   embeddingResult?: { embeddings: number[][]; storedCount: number; dimensions: number };
+  query?: string;
+  retrievedDocuments?: Array<{ content: string; similarity: number; document_name?: string; chunk_index?: number; metadata?: Record<string, unknown> }>;
+  retrievalMetadata?: { query: string; topK: number; threshold: number; totalFound: number };
+  assembledContext?: string;
+  contextMetadata?: { documentsIncluded: number; totalDocuments: number; estimatedTokens: number; format: string };
 }
 
 export type FlowNode = Node<NodeData>;
@@ -236,6 +260,8 @@ const getNodeLabel = (type: NodeType): string => {
     case 'mindmapGenerator': return 'Mindmap Generator';
     case 'chunker': return 'Chunker';
     case 'embedding': return 'Embedding';
+    case 'retriever': return 'Retriever';
+    case 'contextAssembler': return 'Context Assembler';
     default: return 'Node';
   }
 };
@@ -249,6 +275,8 @@ const getNodeCategory = (type: NodeType): NodeCategory => {
     case 'textAnalyzer':
     case 'chunker':
     case 'embedding':
+    case 'retriever':
+    case 'contextAssembler':
       return 'processor';
     case 'imageGenerator':
     case 'videoGenerator':
@@ -395,6 +423,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       mindmapGenerator: 'mindmapGeneratorNode',
       chunker: 'chunkerNode',
       embedding: 'embeddingNode',
+      retriever: 'retrieverNode',
+      contextAssembler: 'contextAssemblerNode',
     };
 
     const getDefaultSettings = (nodeType: NodeType) => {
@@ -415,6 +445,10 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           return { chunkerSettings: { strategy: 'paragraph' as const, chunkSize: 500, overlap: 50, preserveSentences: true } };
         case 'embedding':
           return { embeddingSettings: { model: 'text-embedding-3-small' as const, dimensions: 1536, batchSize: 100, storeInDb: true } };
+        case 'retriever':
+          return { retrieverSettings: { topK: 5, threshold: 0.7 } };
+        case 'contextAssembler':
+          return { contextAssemblerSettings: { maxTokens: 4000, includeMetadata: true, separator: '\n\n---\n\n', format: 'structured' as const } };
         default:
           return {};
       }

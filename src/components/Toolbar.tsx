@@ -17,6 +17,8 @@ import {
   Network,
   Scissors,
   Binary,
+  Search,
+  Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -54,6 +56,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
     { type: 'textAnalyzer' as NodeType, label: 'Text Analyzer', icon: FileSearch, color: 'text-cyan-400' },
     { type: 'chunker' as NodeType, label: 'Chunker', icon: Scissors, color: 'text-amber-400' },
     { type: 'embedding' as NodeType, label: 'Embedding', icon: Binary, color: 'text-violet-400' },
+    { type: 'retriever' as NodeType, label: 'Retriever', icon: Search, color: 'text-emerald-400' },
+    { type: 'contextAssembler' as NodeType, label: 'Context Assembler', icon: Layers, color: 'text-sky-400' },
   ];
 
   const generatorNodes = [
