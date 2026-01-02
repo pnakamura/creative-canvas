@@ -16,6 +16,10 @@ export const connectionRules: Record<NodeType, ConnectionRule> = {
     validTargets: ['assistant', 'imageGenerator', 'chunker'],
     validSources: [],
   },
+  fileUpload: {
+    validTargets: ['chunker', 'assistant', 'textAnalyzer'],
+    validSources: [],
+  },
   vectorStore: {
     validTargets: ['retriever'],
     validSources: ['embedding'],
@@ -32,7 +36,7 @@ export const connectionRules: Record<NodeType, ConnectionRule> = {
   },
   chunker: {
     validTargets: ['embedding'],
-    validSources: ['text', 'reference'],
+    validSources: ['text', 'reference', 'fileUpload'],
   },
   embedding: {
     validTargets: ['vectorStore', 'retriever'],
@@ -143,6 +147,7 @@ const getNodeLabel = (type: NodeType): string => {
     retriever: 'Retriever',
     contextAssembler: 'Context Assembler',
     vectorStore: 'Vector Store',
+    fileUpload: 'File Upload',
   };
   return labels[type] || type;
 };
@@ -179,6 +184,7 @@ export const getEdgeStyle = (validity: ConnectionValidity) => {
 export const ragPipelineConnections: Array<[NodeType, NodeType]> = [
   ['text', 'chunker'],
   ['reference', 'chunker'],
+  ['fileUpload', 'chunker'],
   ['chunker', 'embedding'],
   ['embedding', 'vectorStore'],
   ['vectorStore', 'retriever'],
