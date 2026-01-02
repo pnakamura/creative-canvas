@@ -46,6 +46,7 @@ const getNodeLabel = (type: NodeType): string => {
     retriever: 'Retriever',
     contextAssembler: 'Context Assembler',
     vectorStore: 'Vector Store',
+    fileUpload: 'File Upload',
   };
   return labels[type] || type;
 };

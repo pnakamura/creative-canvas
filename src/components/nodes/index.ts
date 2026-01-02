@@ -14,6 +14,7 @@ import { EmbeddingNode } from './EmbeddingNode';
 import { RetrieverNode } from './RetrieverNode';
 import { ContextAssemblerNode } from './ContextAssemblerNode';
 import { VectorStoreNode } from './VectorStoreNode';
+import { FileUploadNode } from './FileUploadNode';
 
 export const nodeTypes = {
   textNode: TextNode,
@@ -32,6 +33,7 @@ export const nodeTypes = {
   retrieverNode: RetrieverNode,
   contextAssemblerNode: ContextAssemblerNode,
   vectorStoreNode: VectorStoreNode,
+  fileUploadNode: FileUploadNode,
 };
 
 export { 
@@ -51,4 +53,5 @@ export {
   RetrieverNode,
   ContextAssemblerNode,
   VectorStoreNode,
+  FileUploadNode,
 };

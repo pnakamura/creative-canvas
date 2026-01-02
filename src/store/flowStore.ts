@@ -26,7 +26,8 @@ export type NodeType =
   | 'embedding'
   | 'retriever'
   | 'contextAssembler'
-  | 'vectorStore';
+  | 'vectorStore'
+  | 'fileUpload';
 
 export type NodeCategory = 'source' | 'processor' | 'generator' | 'output';
 
@@ -166,6 +167,30 @@ export interface VectorStoreSettings {
   autoRefresh: boolean;
 }
 
+// File Upload Node Settings
+export interface FileUploadSettings {
+  autoExtract: boolean;
+  maxFileSize: number; // in MB
+  preserveFormatting: boolean;
+  extractMetadata: boolean;
+}
+
+export interface FileUploadData {
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+  fileUrl?: string;
+  extractedText?: string;
+  metadata?: {
+    fileName: string;
+    fileType: string;
+    pages?: number;
+    characterCount: number;
+    wordCount: number;
+    extractedAt: string;
+  };
+}
+
 // Output Data Types
 export interface GeneratedOutput {
   content: string;
@@ -235,6 +260,9 @@ export interface NodeData extends Record<string, unknown> {
   selectedKnowledgeBaseId?: string;
   knowledgeBaseCount?: number;
   documentChunks?: Array<{ id: string; document_id: string; document_name: string | null; chunk_index: number; content: string; token_count: number | null }>;
+  // FileUpload specific
+  fileUploadSettings?: FileUploadSettings;
+  fileUploadData?: FileUploadData;
 }
 
 export type FlowNode = Node<NodeData>;
@@ -279,6 +307,7 @@ const getNodeLabel = (type: NodeType): string => {
     case 'retriever': return 'Retriever';
     case 'contextAssembler': return 'Context Assembler';
     case 'vectorStore': return 'Vector Store';
+    case 'fileUpload': return 'File Upload';
     default: return 'Node';
   }
 };
@@ -288,6 +317,7 @@ const getNodeCategory = (type: NodeType): NodeCategory => {
     case 'text':
     case 'reference':
     case 'vectorStore':
+    case 'fileUpload':
       return 'source';
     case 'assistant':
     case 'textAnalyzer':
@@ -462,6 +492,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       retriever: 'retrieverNode',
       contextAssembler: 'contextAssemblerNode',
       vectorStore: 'vectorStoreNode',
+      fileUpload: 'fileUploadNode',
     };
 
     const getDefaultSettings = (nodeType: NodeType) => {
@@ -488,6 +519,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           return { contextAssemblerSettings: { maxTokens: 4000, includeMetadata: true, separator: '\n\n---\n\n', format: 'structured' as const } };
         case 'vectorStore':
           return { vectorStoreSettings: { showChunkPreview: true, maxPreviewChunks: 3, sortBy: 'date' as const, sortOrder: 'desc' as const, autoRefresh: false } };
+        case 'fileUpload':
+          return { fileUploadSettings: { autoExtract: true, maxFileSize: 20, preserveFormatting: true, extractMetadata: true } };
         default:
           return {};
       }
