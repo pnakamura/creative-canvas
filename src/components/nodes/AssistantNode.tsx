@@ -31,12 +31,13 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
     
     const textInput = inputs.find((n) => n.data.type === 'text');
     const referenceInput = inputs.find((n) => n.data.type === 'reference');
+    const contextAssemblerInput = inputs.find((n) => n.data.type === 'contextAssembler');
     
-    if (!textInput?.data.content && !referenceInput) {
+    if (!textInput?.data.content && !referenceInput && !contextAssemblerInput?.data.assembledContext) {
       updateNodeData(props.id, { error: 'No input connected' });
       toast({
         title: "No input",
-        description: "Connect a Text node or Reference node first",
+        description: "Connect a Text, Reference, or Context Assembler node first",
         variant: "destructive",
       });
       return;
@@ -47,8 +48,15 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
     try {
       let basePrompt = textInput?.data.content || '';
       let contextData = '';
+      let ragContext = '';
       let hasImageContext = false;
       let imageUrl = '';
+
+      // Get RAG context from ContextAssemblerNode
+      if (contextAssemblerInput?.data.assembledContext) {
+        ragContext = contextAssemblerInput.data.assembledContext;
+        console.log('Using RAG context:', ragContext.substring(0, 200) + '...');
+      }
 
       if (referenceInput) {
         const refData = referenceInput.data;
@@ -75,6 +83,7 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         body: { 
           prompt: basePrompt,
           context: contextData,
+          ragContext: ragContext,
           hasImage: hasImageContext,
           imageUrl: hasImageContext ? imageUrl : undefined,
           mode: settings.mode,
@@ -130,7 +139,9 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
   const { inputs } = getConnectedNodes(props.id);
   const hasTextInput = inputs.some((n) => n.data.type === 'text');
   const hasReferenceInput = inputs.some((n) => n.data.type === 'reference');
+  const hasContextInput = inputs.some((n) => n.data.type === 'contextAssembler');
   const referenceInput = inputs.find((n) => n.data.type === 'reference');
+  const contextInput = inputs.find((n) => n.data.type === 'contextAssembler');
 
   const creativityLabel = useMemo(() => {
     const creativity = assistantSettings?.creativity || 70;
@@ -170,7 +181,7 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         </div>
 
         {/* Connected Inputs */}
-        {(hasTextInput || hasReferenceInput) && (
+        {(hasTextInput || hasReferenceInput || hasContextInput) && (
           <div className="flex flex-wrap gap-1">
             {hasTextInput && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-primary/20 text-primary">
@@ -185,6 +196,16 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
                   <FileText className="w-3 h-3" />
                 )}
                 {referenceInput.data.assetType === 'image' ? 'Image' : 'Doc'}
+              </span>
+            )}
+            {hasContextInput && contextInput && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-cyan-500/20 text-cyan-400">
+                <Brain className="w-3 h-3" /> RAG Context
+                {contextInput.data.contextMetadata?.documentsIncluded && (
+                  <span className="text-[9px] opacity-70">
+                    ({contextInput.data.contextMetadata.documentsIncluded} docs)
+                  </span>
+                )}
               </span>
             )}
           </div>
