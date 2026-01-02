@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import { Database, Loader2, FileText, Trash2, RefreshCw } from 'lucide-react';
+import { Database, Loader2, FileText, Trash2, RefreshCw, Plus } from 'lucide-react';
 import { useFlowStore, NodeData } from '@/store/flowStore';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +44,10 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
   const [documents, setDocuments] = useState<DocumentChunk[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newKbName, setNewKbName] = useState('');
+  const [newKbDescription, setNewKbDescription] = useState('');
 
   // Fetch knowledge bases
   const fetchKnowledgeBases = useCallback(async () => {
@@ -125,6 +133,44 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
     }
   }, [user, fetchKnowledgeBases]);
 
+  // Create a new knowledge base
+  const createKnowledgeBase = useCallback(async () => {
+    if (!user || !newKbName.trim()) return;
+    
+    setIsCreating(true);
+    try {
+      const { data, error } = await supabase
+        .from('knowledge_bases')
+        .insert({
+          name: newKbName.trim(),
+          description: newKbDescription.trim() || null,
+          user_id: user.id,
+          document_count: 0,
+          chunk_count: 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      toast.success('Knowledge base created');
+      setNewKbName('');
+      setNewKbDescription('');
+      setIsDialogOpen(false);
+      fetchKnowledgeBases();
+      
+      // Auto-select the new KB
+      if (data) {
+        setSelectedKb(data.id);
+      }
+    } catch (error) {
+      console.error('Error creating knowledge base:', error);
+      toast.error('Failed to create knowledge base');
+    } finally {
+      setIsCreating(false);
+    }
+  }, [user, newKbName, newKbDescription, fetchKnowledgeBases]);
+
   // Initialize
   useEffect(() => {
     fetchKnowledgeBases();
@@ -167,23 +213,87 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
       outputs={[{ id: 'context', type: 'context', label: 'Knowledge Base ID' }]}
     >
       <div className="space-y-3">
-        {/* Refresh Button */}
+        {/* Header with Create and Refresh */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
             {knowledgeBases.length} knowledge base{knowledgeBases.length !== 1 ? 's' : ''}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              fetchKnowledgeBases();
-            }}
-            disabled={isLoading}
-            className="nodrag h-6 px-2"
-          >
-            <RefreshCw className={cn("w-3 h-3", isLoading && "animate-spin")} />
-          </Button>
+          <div className="flex gap-1">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="nodrag h-6 px-2 text-primary hover:text-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Plus className="w-3 h-3" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[400px]" onClick={(e) => e.stopPropagation()}>
+                <DialogHeader>
+                  <DialogTitle>Create Knowledge Base</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="kb-name">Name</Label>
+                    <Input
+                      id="kb-name"
+                      placeholder="My Knowledge Base"
+                      value={newKbName}
+                      onChange={(e) => setNewKbName(e.target.value)}
+                      className="nodrag"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="kb-description">Description (optional)</Label>
+                    <Textarea
+                      id="kb-description"
+                      placeholder="A collection of documents about..."
+                      value={newKbDescription}
+                      onChange={(e) => setNewKbDescription(e.target.value)}
+                      className="nodrag resize-none"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                    disabled={isCreating}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={createKnowledgeBase}
+                    disabled={!newKbName.trim() || isCreating}
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                fetchKnowledgeBases();
+              }}
+              disabled={isLoading}
+              className="nodrag h-6 px-2"
+            >
+              <RefreshCw className={cn("w-3 h-3", isLoading && "animate-spin")} />
+            </Button>
+          </div>
         </div>
 
         {/* Knowledge Bases List */}
