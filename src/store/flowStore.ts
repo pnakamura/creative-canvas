@@ -270,10 +270,11 @@ export interface RouterSettings {
 }
 
 export interface RouterData {
-  inputData?: unknown;
+  inputData?: string;
   evaluationResults?: Record<string, boolean>; // conditionId -> matched
-  matchedBranch?: string;
-  executedAt?: string;
+  matchedBranch?: string | null;
+  matchedBranches?: string[];
+  lastEvaluatedAt?: string;
 }
 
 // Output Data Types
