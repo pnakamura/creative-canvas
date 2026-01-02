@@ -29,15 +29,22 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
   const handleProcess = useCallback(async () => {
     const { inputs } = getConnectedNodes(props.id);
     
-    const textInput = inputs.find((n) => n.data.type === 'text');
-    const referenceInput = inputs.find((n) => n.data.type === 'reference');
-    const contextAssemblerInput = inputs.find((n) => n.data.type === 'contextAssembler');
+    const textInput = inputs.find((n) => (n.data as NodeData).type === 'text');
+    const referenceInput = inputs.find((n) => (n.data as NodeData).type === 'reference');
+    const contextAssemblerInput = inputs.find((n) => (n.data as NodeData).type === 'contextAssembler');
+    const retrieverInput = inputs.find((n) => (n.data as NodeData).type === 'retriever');
     
-    if (!textInput?.data.content && !referenceInput && !contextAssemblerInput?.data.assembledContext) {
+    // Get content from any valid input
+    const hasValidInput = textInput?.data.content || 
+                          referenceInput || 
+                          contextAssemblerInput?.data.assembledContext ||
+                          retrieverInput?.data.retrievedDocuments;
+    
+    if (!hasValidInput) {
       updateNodeData(props.id, { error: 'No input connected' });
       toast({
         title: "No input",
-        description: "Connect a Text, Reference, or Context Assembler node first",
+        description: "Connect a Text, Reference, Context Assembler, or Retriever node first",
         variant: "destructive",
       });
       return;
@@ -52,10 +59,17 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
       let hasImageContext = false;
       let imageUrl = '';
 
-      // Get RAG context from ContextAssemblerNode
+      // Get RAG context from ContextAssemblerNode or directly from RetrieverNode
       if (contextAssemblerInput?.data.assembledContext) {
-        ragContext = contextAssemblerInput.data.assembledContext;
-        console.log('Using RAG context:', ragContext.substring(0, 200) + '...');
+        ragContext = contextAssemblerInput.data.assembledContext as string;
+        console.log('Using RAG context from ContextAssembler:', ragContext.substring(0, 200) + '...');
+      } else if (retrieverInput?.data.retrievedDocuments) {
+        // Build context directly from retriever documents
+        const docs = retrieverInput.data.retrievedDocuments as Array<{ content: string; similarity: number; document_name?: string }>;
+        ragContext = docs.map((doc, idx) => 
+          `[Documento ${idx + 1}]${doc.document_name ? `\nFonte: ${doc.document_name}` : ''}\n\n${doc.content}`
+        ).join('\n\n---\n\n');
+        console.log('Using RAG context from Retriever:', ragContext.substring(0, 200) + '...');
       }
 
       if (referenceInput) {
@@ -137,11 +151,13 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
   }, [props.id, getConnectedNodes, updateNodeData, toast, assistantSettings, currentMode]);
 
   const { inputs } = getConnectedNodes(props.id);
-  const hasTextInput = inputs.some((n) => n.data.type === 'text');
-  const hasReferenceInput = inputs.some((n) => n.data.type === 'reference');
-  const hasContextInput = inputs.some((n) => n.data.type === 'contextAssembler');
-  const referenceInput = inputs.find((n) => n.data.type === 'reference');
-  const contextInput = inputs.find((n) => n.data.type === 'contextAssembler');
+  const hasTextInput = inputs.some((n) => (n.data as NodeData).type === 'text');
+  const hasReferenceInput = inputs.some((n) => (n.data as NodeData).type === 'reference');
+  const hasContextInput = inputs.some((n) => (n.data as NodeData).type === 'contextAssembler');
+  const hasRetrieverInput = inputs.some((n) => (n.data as NodeData).type === 'retriever');
+  const referenceInput = inputs.find((n) => (n.data as NodeData).type === 'reference');
+  const contextInput = inputs.find((n) => (n.data as NodeData).type === 'contextAssembler');
+  const retrieverInput = inputs.find((n) => (n.data as NodeData).type === 'retriever');
 
   const creativityLabel = useMemo(() => {
     const creativity = assistantSettings?.creativity || 70;
@@ -181,7 +197,7 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         </div>
 
         {/* Connected Inputs */}
-        {(hasTextInput || hasReferenceInput || hasContextInput) && (
+        {(hasTextInput || hasReferenceInput || hasContextInput || hasRetrieverInput) && (
           <div className="flex flex-wrap gap-1">
             {hasTextInput && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-primary/20 text-primary">
@@ -190,20 +206,30 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
             )}
             {hasReferenceInput && referenceInput && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-400">
-                {referenceInput.data.assetType === 'image' ? (
+                {(referenceInput.data as NodeData).assetType === 'image' ? (
                   <Image className="w-3 h-3" />
                 ) : (
                   <FileText className="w-3 h-3" />
                 )}
-                {referenceInput.data.assetType === 'image' ? 'Image' : 'Doc'}
+                {(referenceInput.data as NodeData).assetType === 'image' ? 'Image' : 'Doc'}
               </span>
             )}
             {hasContextInput && contextInput && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-cyan-500/20 text-cyan-400">
                 <Brain className="w-3 h-3" /> RAG Context
-                {contextInput.data.contextMetadata?.documentsIncluded && (
+                {(contextInput.data as NodeData).contextMetadata?.documentsIncluded && (
                   <span className="text-[9px] opacity-70">
-                    ({contextInput.data.contextMetadata.documentsIncluded} docs)
+                    ({(contextInput.data as NodeData).contextMetadata?.documentsIncluded} docs)
+                  </span>
+                )}
+              </span>
+            )}
+            {hasRetrieverInput && retrieverInput && !hasContextInput && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-400">
+                <Brain className="w-3 h-3" /> Retriever
+                {(retrieverInput.data as NodeData).retrievedDocuments && (
+                  <span className="text-[9px] opacity-70">
+                    ({((retrieverInput.data as NodeData).retrievedDocuments as Array<unknown>)?.length || 0} docs)
                   </span>
                 )}
               </span>
