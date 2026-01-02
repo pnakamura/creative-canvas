@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { NodeProps, Handle, Position } from '@xyflow/react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  Play,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFlowStore, NodeData, RouterCondition, FlowNode } from '@/store/flowStore';
@@ -28,15 +30,183 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { toast } from 'sonner';
+
+// Helper to get nested value from object using dot notation
+const getNestedValue = (obj: unknown, path: string): unknown => {
+  if (!path) return obj;
+  const keys = path.split('.');
+  let current: unknown = obj;
+  for (const key of keys) {
+    if (current === null || current === undefined) return undefined;
+    if (typeof current === 'object' && key in (current as Record<string, unknown>)) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+};
+
+// Evaluate a single condition against input data
+const evaluateCondition = (condition: RouterCondition, inputData: unknown): boolean => {
+  if (!condition.enabled) return false;
+  
+  const fieldValue = condition.field ? getNestedValue(inputData, condition.field) : inputData;
+  const stringValue = fieldValue !== null && fieldValue !== undefined ? String(fieldValue) : '';
+  const compareValue = condition.value;
+  
+  switch (condition.operator) {
+    case 'equals':
+      return stringValue === compareValue;
+    case 'notEquals':
+      return stringValue !== compareValue;
+    case 'contains':
+      return stringValue.toLowerCase().includes(compareValue.toLowerCase());
+    case 'notContains':
+      return !stringValue.toLowerCase().includes(compareValue.toLowerCase());
+    case 'startsWith':
+      return stringValue.toLowerCase().startsWith(compareValue.toLowerCase());
+    case 'endsWith':
+      return stringValue.toLowerCase().endsWith(compareValue.toLowerCase());
+    case 'greaterThan': {
+      const numValue = parseFloat(stringValue);
+      const numCompare = parseFloat(compareValue);
+      return !isNaN(numValue) && !isNaN(numCompare) && numValue > numCompare;
+    }
+    case 'lessThan': {
+      const numValue = parseFloat(stringValue);
+      const numCompare = parseFloat(compareValue);
+      return !isNaN(numValue) && !isNaN(numCompare) && numValue < numCompare;
+    }
+    case 'greaterOrEqual': {
+      const numValue = parseFloat(stringValue);
+      const numCompare = parseFloat(compareValue);
+      return !isNaN(numValue) && !isNaN(numCompare) && numValue >= numCompare;
+    }
+    case 'lessOrEqual': {
+      const numValue = parseFloat(stringValue);
+      const numCompare = parseFloat(compareValue);
+      return !isNaN(numValue) && !isNaN(numCompare) && numValue <= numCompare;
+    }
+    case 'isEmpty':
+      return stringValue.trim() === '' || fieldValue === null || fieldValue === undefined;
+    case 'isNotEmpty':
+      return stringValue.trim() !== '' && fieldValue !== null && fieldValue !== undefined;
+    case 'matches':
+      try {
+        const regex = new RegExp(compareValue, 'i');
+        return regex.test(stringValue);
+      } catch {
+        return false;
+      }
+    default:
+      return false;
+  }
+};
 
 export const RouterNode: React.FC<NodeProps<FlowNode>> = ({ id, data, selected }) => {
-  const { setSelectedNode, updateNodeData } = useFlowStore();
+  const { setSelectedNode, updateNodeData, edges, nodes } = useFlowStore();
   const [isEditing, setIsEditing] = useState(false);
   const [label, setLabel] = useState(data.label || 'Conditional Router');
   const [expandedCondition, setExpandedCondition] = useState<number | null>(0);
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   const conditions = data.routerSettings?.conditions || [];
   const evaluationResults = data.routerData?.evaluationResults || {};
+  const evaluateAll = data.routerSettings?.evaluateAll ?? false;
+
+  // Get input data from connected source nodes
+  const getInputData = useCallback((): unknown => {
+    const incomingEdges = edges.filter(e => e.target === id);
+    if (incomingEdges.length === 0) return null;
+
+    const sourceNodeId = incomingEdges[0].source;
+    const sourceNode = nodes.find(n => n.id === sourceNodeId);
+    if (!sourceNode) return null;
+
+    // Try to get output from various node types
+    const nodeData = sourceNode.data;
+    if (nodeData.textContent) return nodeData.textContent;
+    if (nodeData.assistantData && typeof nodeData.assistantData === 'object' && 'response' in nodeData.assistantData) {
+      return (nodeData.assistantData as { response: string }).response;
+    }
+    if (nodeData.apiConnectorData && typeof nodeData.apiConnectorData === 'object' && 'response' in nodeData.apiConnectorData) {
+      const apiResponse = nodeData.apiConnectorData as { response?: { data?: unknown } };
+      if (apiResponse.response?.data) {
+        return apiResponse.response.data;
+      }
+    }
+    if (nodeData.textAnalyzerData && typeof nodeData.textAnalyzerData === 'object' && 'result' in nodeData.textAnalyzerData) {
+      return (nodeData.textAnalyzerData as { result: unknown }).result;
+    }
+    if (nodeData.extractedText) return nodeData.extractedText;
+    
+    return null;
+  }, [edges, nodes, id]);
+
+  // Evaluate all conditions and route accordingly
+  const handleEvaluate = useCallback(() => {
+    const inputData = getInputData();
+    
+    if (inputData === null) {
+      toast.error('No input data available. Connect a source node first.');
+      return;
+    }
+
+    setIsEvaluating(true);
+    
+    try {
+      const results: Record<string, boolean> = {};
+      let matchedBranch: string | null = null;
+      const matchedBranches: string[] = [];
+
+      for (const condition of conditions) {
+        const result = evaluateCondition(condition, inputData);
+        results[condition.id] = result;
+        
+        if (result) {
+          matchedBranches.push(condition.name);
+          if (!matchedBranch) {
+            matchedBranch = condition.name;
+          }
+          // If not evaluating all, stop at first match
+          if (!evaluateAll) break;
+        }
+      }
+
+      updateNodeData(id, {
+        routerData: {
+          evaluationResults: results,
+          matchedBranch: matchedBranch || 'default',
+          matchedBranches,
+          inputData: typeof inputData === 'string' ? inputData : JSON.stringify(inputData),
+          lastEvaluatedAt: new Date().toISOString(),
+        },
+        isComplete: true,
+        error: undefined,
+      });
+
+      if (matchedBranch) {
+        toast.success(`Routed to: ${evaluateAll ? matchedBranches.join(', ') : matchedBranch}`);
+      } else {
+        toast.info('No conditions matched. Using default branch.');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Evaluation failed';
+      updateNodeData(id, {
+        error: errorMessage,
+        routerData: {
+          ...data.routerData,
+          evaluationResults: {},
+          matchedBranch: null,
+        },
+      });
+      toast.error(errorMessage);
+    } finally {
+      setIsEvaluating(false);
+    }
+  }, [conditions, evaluateAll, getInputData, id, updateNodeData, data.routerData]);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -302,8 +472,25 @@ export const RouterNode: React.FC<NodeProps<FlowNode>> = ({ id, data, selected }
         />
       </div>
 
-      {/* Add Condition Button */}
-      <div className="p-2 border-t border-border/30">
+      {/* Actions */}
+      <div className="p-2 border-t border-border/30 space-y-1.5">
+        <Button
+          variant="default"
+          size="sm"
+          className="w-full h-8 text-xs gap-1.5 nodrag bg-amber-500 hover:bg-amber-600 text-white"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEvaluate();
+          }}
+          disabled={isEvaluating || conditions.length === 0}
+        >
+          {isEvaluating ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <Play className="w-3 h-3" />
+          )}
+          Evaluate & Route
+        </Button>
         <Button
           variant="ghost"
           size="sm"
