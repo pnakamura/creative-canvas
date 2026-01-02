@@ -47,6 +47,7 @@ const getNodeLabel = (type: NodeType): string => {
     contextAssembler: 'Context Assembler',
     vectorStore: 'Vector Store',
     fileUpload: 'File Upload',
+    apiConnector: 'API Connector',
   };
   return labels[type] || type;
 };

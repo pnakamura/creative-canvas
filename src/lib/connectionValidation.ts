@@ -9,15 +9,15 @@ export interface ConnectionRule {
 export const connectionRules: Record<NodeType, ConnectionRule> = {
   // Sources
   text: {
-    validTargets: ['assistant', 'textAnalyzer', 'chunker', 'imageGenerator'],
+    validTargets: ['assistant', 'textAnalyzer', 'chunker', 'imageGenerator', 'apiConnector'],
     validSources: [],
   },
   reference: {
-    validTargets: ['assistant', 'imageGenerator', 'chunker'],
+    validTargets: ['assistant', 'imageGenerator', 'chunker', 'apiConnector'],
     validSources: [],
   },
   fileUpload: {
-    validTargets: ['chunker', 'assistant', 'textAnalyzer'],
+    validTargets: ['chunker', 'assistant', 'textAnalyzer', 'apiConnector'],
     validSources: [],
   },
   vectorStore: {
@@ -27,16 +27,16 @@ export const connectionRules: Record<NodeType, ConnectionRule> = {
   
   // Processors
   assistant: {
-    validTargets: ['imageGenerator', 'videoGenerator', 'textAnalyzer', 'reportGenerator', 'documentGenerator', 'infographicGenerator', 'presentationGenerator', 'mindmapGenerator'],
-    validSources: ['text', 'reference', 'contextAssembler', 'retriever', 'assistant'],
+    validTargets: ['imageGenerator', 'videoGenerator', 'textAnalyzer', 'reportGenerator', 'documentGenerator', 'infographicGenerator', 'presentationGenerator', 'mindmapGenerator', 'apiConnector'],
+    validSources: ['text', 'reference', 'contextAssembler', 'retriever', 'assistant', 'apiConnector'],
   },
   textAnalyzer: {
     validTargets: ['reportGenerator', 'documentGenerator', 'infographicGenerator', 'presentationGenerator', 'mindmapGenerator', 'assistant'],
-    validSources: ['text', 'assistant', 'reference'],
+    validSources: ['text', 'assistant', 'reference', 'apiConnector'],
   },
   chunker: {
     validTargets: ['embedding'],
-    validSources: ['text', 'reference', 'fileUpload'],
+    validSources: ['text', 'reference', 'fileUpload', 'apiConnector'],
   },
   embedding: {
     validTargets: ['vectorStore', 'retriever'],
@@ -49,6 +49,10 @@ export const connectionRules: Record<NodeType, ConnectionRule> = {
   contextAssembler: {
     validTargets: ['assistant'],
     validSources: ['retriever'],
+  },
+  apiConnector: {
+    validTargets: ['assistant', 'textAnalyzer', 'chunker', 'reportGenerator', 'documentGenerator', 'infographicGenerator', 'presentationGenerator', 'mindmapGenerator'],
+    validSources: ['text', 'fileUpload', 'reference', 'assistant'],
   },
   
   // Generators
@@ -64,23 +68,23 @@ export const connectionRules: Record<NodeType, ConnectionRule> = {
   // Output nodes
   reportGenerator: {
     validTargets: [],
-    validSources: ['textAnalyzer', 'assistant'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
   },
   documentGenerator: {
     validTargets: [],
-    validSources: ['textAnalyzer', 'assistant'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
   },
   infographicGenerator: {
     validTargets: [],
-    validSources: ['textAnalyzer', 'assistant'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
   },
   presentationGenerator: {
     validTargets: [],
-    validSources: ['textAnalyzer', 'assistant'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
   },
   mindmapGenerator: {
     validTargets: [],
-    validSources: ['textAnalyzer', 'assistant'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
   },
 };
 
@@ -148,6 +152,7 @@ const getNodeLabel = (type: NodeType): string => {
     contextAssembler: 'Context Assembler',
     vectorStore: 'Vector Store',
     fileUpload: 'File Upload',
+    apiConnector: 'API Connector',
   };
   return labels[type] || type;
 };
