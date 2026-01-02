@@ -16,6 +16,7 @@ import { ContextAssemblerNode } from './ContextAssemblerNode';
 import { VectorStoreNode } from './VectorStoreNode';
 import { FileUploadNode } from './FileUploadNode';
 import { ApiConnectorNode } from './ApiConnectorNode';
+import { RouterNode } from './RouterNode';
 
 export const nodeTypes = {
   textNode: TextNode,
@@ -36,6 +37,7 @@ export const nodeTypes = {
   vectorStoreNode: VectorStoreNode,
   fileUploadNode: FileUploadNode,
   apiConnectorNode: ApiConnectorNode,
+  routerNode: RouterNode,
 };
 
 export { 
@@ -57,4 +59,5 @@ export {
   VectorStoreNode,
   FileUploadNode,
   ApiConnectorNode,
+  RouterNode,
 };

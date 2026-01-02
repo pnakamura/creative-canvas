@@ -28,7 +28,8 @@ export type NodeType =
   | 'contextAssembler'
   | 'vectorStore'
   | 'fileUpload'
-  | 'apiConnector';
+  | 'apiConnector'
+  | 'router';
 
 // API Connector Types
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -237,6 +238,44 @@ export interface ApiConnectorData {
   }>;
 }
 
+// Router Node Types
+export type RouterOperator = 
+  | 'equals' 
+  | 'notEquals' 
+  | 'contains' 
+  | 'notContains' 
+  | 'startsWith' 
+  | 'endsWith' 
+  | 'greaterThan' 
+  | 'lessThan' 
+  | 'greaterOrEqual' 
+  | 'lessOrEqual' 
+  | 'isEmpty' 
+  | 'isNotEmpty' 
+  | 'matches';
+
+export interface RouterCondition {
+  id: string;
+  name: string;
+  field: string;
+  operator: RouterOperator;
+  value: string;
+  enabled: boolean;
+}
+
+export interface RouterSettings {
+  conditions: RouterCondition[];
+  evaluateAll: boolean; // If true, evaluate all conditions; if false, stop at first match
+  defaultBehavior: 'continue' | 'stop' | 'error';
+}
+
+export interface RouterData {
+  inputData?: unknown;
+  evaluationResults?: Record<string, boolean>; // conditionId -> matched
+  matchedBranch?: string;
+  executedAt?: string;
+}
+
 // Output Data Types
 export interface GeneratedOutput {
   content: string;
@@ -312,6 +351,9 @@ export interface NodeData extends Record<string, unknown> {
   // API Connector specific
   apiConnectorSettings?: ApiConnectorSettings;
   apiConnectorData?: ApiConnectorData;
+  // Router specific
+  routerSettings?: RouterSettings;
+  routerData?: RouterData;
 }
 
 export type FlowNode = Node<NodeData>;
@@ -358,6 +400,7 @@ const getNodeLabel = (type: NodeType): string => {
     case 'vectorStore': return 'Vector Store';
     case 'fileUpload': return 'File Upload';
     case 'apiConnector': return 'API Connector';
+    case 'router': return 'Conditional Router';
     default: return 'Node';
   }
 };
@@ -376,6 +419,7 @@ const getNodeCategory = (type: NodeType): NodeCategory => {
     case 'retriever':
     case 'contextAssembler':
     case 'apiConnector':
+    case 'router':
       return 'processor';
     case 'imageGenerator':
     case 'videoGenerator':
@@ -545,6 +589,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       vectorStore: 'vectorStoreNode',
       fileUpload: 'fileUploadNode',
       apiConnector: 'apiConnectorNode',
+      router: 'routerNode',
     };
 
     const getDefaultSettings = (nodeType: NodeType) => {
@@ -587,6 +632,14 @@ export const useFlowStore = create<FlowState>((set, get) => ({
               validateSSL: true, 
               retryOnFail: false, 
               retryCount: 3 
+            } 
+          };
+        case 'router':
+          return { 
+            routerSettings: { 
+              conditions: [], 
+              evaluateAll: false, 
+              defaultBehavior: 'continue' as const 
             } 
           };
         default:

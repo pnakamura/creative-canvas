@@ -51,40 +51,44 @@ export const connectionRules: Record<NodeType, ConnectionRule> = {
     validSources: ['retriever'],
   },
   apiConnector: {
-    validTargets: ['assistant', 'textAnalyzer', 'chunker', 'reportGenerator', 'documentGenerator', 'infographicGenerator', 'presentationGenerator', 'mindmapGenerator'],
-    validSources: ['text', 'fileUpload', 'reference', 'assistant'],
+    validTargets: ['assistant', 'textAnalyzer', 'chunker', 'reportGenerator', 'documentGenerator', 'infographicGenerator', 'presentationGenerator', 'mindmapGenerator', 'router'],
+    validSources: ['text', 'fileUpload', 'reference', 'assistant', 'router'],
+  },
+  router: {
+    validTargets: ['assistant', 'textAnalyzer', 'chunker', 'apiConnector', 'reportGenerator', 'documentGenerator', 'infographicGenerator', 'presentationGenerator', 'mindmapGenerator', 'imageGenerator'],
+    validSources: ['text', 'fileUpload', 'reference', 'assistant', 'apiConnector', 'textAnalyzer'],
   },
   
   // Generators
   imageGenerator: {
-    validTargets: ['videoGenerator'],
-    validSources: ['assistant', 'text', 'reference'],
+    validTargets: ['videoGenerator', 'router'],
+    validSources: ['assistant', 'text', 'reference', 'router'],
   },
   videoGenerator: {
-    validTargets: [],
-    validSources: ['imageGenerator'],
+    validTargets: ['router'],
+    validSources: ['imageGenerator', 'router'],
   },
   
   // Output nodes
   reportGenerator: {
-    validTargets: [],
-    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
+    validTargets: ['router'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector', 'router'],
   },
   documentGenerator: {
-    validTargets: [],
-    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
+    validTargets: ['router'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector', 'router'],
   },
   infographicGenerator: {
-    validTargets: [],
-    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
+    validTargets: ['router'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector', 'router'],
   },
   presentationGenerator: {
-    validTargets: [],
-    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
+    validTargets: ['router'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector', 'router'],
   },
   mindmapGenerator: {
-    validTargets: [],
-    validSources: ['textAnalyzer', 'assistant', 'apiConnector'],
+    validTargets: ['router'],
+    validSources: ['textAnalyzer', 'assistant', 'apiConnector', 'router'],
   },
 };
 
@@ -153,6 +157,7 @@ const getNodeLabel = (type: NodeType): string => {
     vectorStore: 'Vector Store',
     fileUpload: 'File Upload',
     apiConnector: 'API Connector',
+    router: 'Conditional Router',
   };
   return labels[type] || type;
 };
