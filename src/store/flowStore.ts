@@ -25,7 +25,8 @@ export type NodeType =
   | 'chunker'
   | 'embedding'
   | 'retriever'
-  | 'contextAssembler';
+  | 'contextAssembler'
+  | 'vectorStore';
 
 export type NodeCategory = 'source' | 'processor' | 'generator' | 'output';
 
@@ -262,6 +263,7 @@ const getNodeLabel = (type: NodeType): string => {
     case 'embedding': return 'Embedding';
     case 'retriever': return 'Retriever';
     case 'contextAssembler': return 'Context Assembler';
+    case 'vectorStore': return 'Vector Store';
     default: return 'Node';
   }
 };
@@ -270,6 +272,7 @@ const getNodeCategory = (type: NodeType): NodeCategory => {
   switch (type) {
     case 'text':
     case 'reference':
+    case 'vectorStore':
       return 'source';
     case 'assistant':
     case 'textAnalyzer':
@@ -443,6 +446,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       embedding: 'embeddingNode',
       retriever: 'retrieverNode',
       contextAssembler: 'contextAssemblerNode',
+      vectorStore: 'vectorStoreNode',
     };
 
     const getDefaultSettings = (nodeType: NodeType) => {
