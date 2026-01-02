@@ -48,6 +48,7 @@ const getNodeLabel = (type: NodeType): string => {
     vectorStore: 'Vector Store',
     fileUpload: 'File Upload',
     apiConnector: 'API Connector',
+    router: 'Conditional Router',
   };
   return labels[type] || type;
 };
