@@ -11,6 +11,8 @@ import { PresentationGeneratorNode } from './PresentationGeneratorNode';
 import { MindmapGeneratorNode } from './MindmapGeneratorNode';
 import { ChunkerNode } from './ChunkerNode';
 import { EmbeddingNode } from './EmbeddingNode';
+import { RetrieverNode } from './RetrieverNode';
+import { ContextAssemblerNode } from './ContextAssemblerNode';
 
 export const nodeTypes = {
   textNode: TextNode,
@@ -26,6 +28,8 @@ export const nodeTypes = {
   mindmapGeneratorNode: MindmapGeneratorNode,
   chunkerNode: ChunkerNode,
   embeddingNode: EmbeddingNode,
+  retrieverNode: RetrieverNode,
+  contextAssemblerNode: ContextAssemblerNode,
 };
 
 export { 
@@ -42,4 +46,6 @@ export {
   MindmapGeneratorNode,
   ChunkerNode,
   EmbeddingNode,
+  RetrieverNode,
+  ContextAssemblerNode,
 };
