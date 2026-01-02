@@ -20,6 +20,9 @@ import {
   Search,
   Layers,
   Database,
+  LayoutTemplate,
+  Zap,
+  Eraser,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,20 +34,44 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useFlowStore, NodeType } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ToolbarProps {
   onExecuteFlow?: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
-  const { addNode, selectedNodeId, deleteNode, isExecuting, nodes } = useFlowStore();
+  const { addNode, selectedNodeId, deleteNode, isExecuting, nodes, loadRagPipelineTemplate, clearCanvas } = useFlowStore();
 
   const handleAddNode = (type: NodeType) => {
     const centerX = window.innerWidth / 2 - 150;
     const centerY = window.innerHeight / 2 - 100;
     addNode(type, { x: centerX + Math.random() * 100, y: centerY + Math.random() * 100 });
+  };
+
+  const handleLoadRagTemplate = () => {
+    loadRagPipelineTemplate();
+    toast.success('RAG Pipeline template loaded!', {
+      description: 'Text → Chunker → Embedding → VectorStore → Retriever → ContextAssembler → Assistant',
+    });
+  };
+
+  const handleClearCanvas = () => {
+    clearCanvas();
+    toast.info('Canvas cleared');
   };
 
   const sourceNodes = [
@@ -141,6 +168,61 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="w-px h-6 bg-border/50" />
+
+        {/* Templates dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="toolbar-button">
+              <LayoutTemplate className="w-4 h-4" />
+              <span className="hidden sm:inline">Templates</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="glass-panel border-border/50 w-64" align="start">
+            <DropdownMenuLabel className="text-muted-foreground text-xs uppercase tracking-wide">Pipeline Templates</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                onClick={handleLoadRagTemplate}
+                className="gap-2 cursor-pointer focus:bg-muted"
+              >
+                <Zap className="w-4 h-4 text-[hsl(var(--edge-rag))]" />
+                <div className="flex flex-col">
+                  <span className="font-medium">RAG Pipeline</span>
+                  <span className="text-xs text-muted-foreground">
+                    Complete retrieval-augmented generation flow
+                  </span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="bg-border/50" />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem
+                  onSelect={(e) => e.preventDefault()}
+                  className="gap-2 cursor-pointer focus:bg-muted text-muted-foreground"
+                >
+                  <Eraser className="w-4 h-4" />
+                  Clear Canvas
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="glass-panel border-border">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear Canvas?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove all nodes and connections from the canvas. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearCanvas} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Clear
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </DropdownMenuContent>
         </DropdownMenu>
 
