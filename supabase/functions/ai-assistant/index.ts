@@ -111,7 +111,8 @@ serve(async (req) => {
   try {
     const { 
       prompt, 
-      context, 
+      context,
+      ragContext,
       hasImage, 
       imageUrl,
       mode = 'expand',
@@ -137,9 +138,22 @@ serve(async (req) => {
     console.log("AI Assistant processing:", { mode, tone, creativity, outputLength });
     console.log("Input prompt:", prompt?.substring(0, 100));
     console.log("Has context:", !!context);
+    console.log("Has RAG context:", !!ragContext);
     console.log("Has image:", hasImage);
 
     let systemPrompt = getModeSystemPrompt(mode, tone, creativity, outputLength);
+
+    // Add RAG context instruction (high priority - retrieved knowledge)
+    if (ragContext) {
+      systemPrompt += `\n\n## Retrieved Knowledge Context (RAG)
+You have access to semantically relevant documents retrieved from a knowledge base. Use this context as your primary source of information to ground your response in factual, retrieved knowledge. The context contains the most relevant excerpts for the user's query:
+
+---
+${ragContext}
+---
+
+IMPORTANT: Base your response primarily on this retrieved context. If the context doesn't contain relevant information, acknowledge this limitation.`;
+    }
 
     if (context) {
       systemPrompt += `\n\nYou have been provided with reference document content. Use it to inform the style, tone, or subject matter. Extract relevant visual elements, themes, or aesthetic cues from the document.`;

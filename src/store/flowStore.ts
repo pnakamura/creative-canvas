@@ -403,6 +403,24 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       }
     }
 
+    // ContextAssembler can connect to assistant (for RAG context)
+    if (sourceNode.data.type === 'contextAssembler') {
+      const validTargets = ['assistant'];
+      if (!validTargets.includes(targetNode.data.type)) {
+        console.warn('Context Assembler can only connect to Assistant');
+        return;
+      }
+    }
+
+    // Retriever can connect to contextAssembler
+    if (sourceNode.data.type === 'retriever') {
+      const validTargets = ['contextAssembler'];
+      if (!validTargets.includes(targetNode.data.type)) {
+        console.warn('Retriever can only connect to Context Assembler');
+        return;
+      }
+    }
+
     set({
       edges: addEdge(connection, get().edges),
     });
