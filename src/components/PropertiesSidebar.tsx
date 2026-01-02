@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Settings2, Type, Sparkles, Image, Video, FileText, Wand2, Brain, Lightbulb, Pencil, MessageSquare, FileSearch, BarChart3, Presentation, Network, FileCheck, GitCompare, BookOpen, FileSpreadsheet, Search, Layers } from 'lucide-react';
+import { X, Settings2, Type, Sparkles, Image, Video, FileText, Wand2, Brain, Lightbulb, Pencil, MessageSquare, FileSearch, BarChart3, Presentation, Network, FileCheck, GitCompare, BookOpen, FileSpreadsheet, Search, Layers, Scissors, Binary, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings, RetrieverSettings, ContextAssemblerSettings, ContextFormat } from '@/store/flowStore';
+import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings, RetrieverSettings, ContextAssemblerSettings, ContextFormat, ChunkerSettings, ChunkStrategy, EmbeddingSettings, EmbeddingModel } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +63,19 @@ const contextFormatOptions: { value: ContextFormat; label: string; description: 
   { value: 'structured', label: 'Structured', description: 'Numbered with headers' },
   { value: 'concatenated', label: 'Concatenated', description: 'Simple text blocks' },
   { value: 'markdown', label: 'Markdown', description: 'Formatted with markdown' },
+];
+
+const chunkStrategyOptions: { value: ChunkStrategy; label: string; description: string }[] = [
+  { value: 'paragraph', label: 'Paragraph', description: 'Split by paragraphs' },
+  { value: 'sentence', label: 'Sentence', description: 'Split by sentences' },
+  { value: 'fixed', label: 'Fixed Size', description: 'Fixed token chunks' },
+  { value: 'semantic', label: 'Semantic', description: 'AI-based semantic splitting' },
+];
+
+const embeddingModelOptions: { value: EmbeddingModel; label: string; dimensions: number }[] = [
+  { value: 'text-embedding-3-small', label: 'Small (Fast)', dimensions: 1536 },
+  { value: 'text-embedding-3-large', label: 'Large (Accurate)', dimensions: 3072 },
+  { value: 'text-embedding-ada-002', label: 'Ada-002 (Legacy)', dimensions: 1536 },
 ];
 
 export const PropertiesSidebar: React.FC = () => {
@@ -176,6 +189,38 @@ export const PropertiesSidebar: React.FC = () => {
     });
   };
 
+  const handleChunkerSettingsChange = (key: keyof ChunkerSettings, value: any) => {
+    const currentSettings: ChunkerSettings = data.chunkerSettings || {
+      strategy: 'paragraph',
+      chunkSize: 500,
+      overlap: 50,
+      preserveSentences: true,
+    };
+    
+    updateNodeData(selectedNodeId!, {
+      chunkerSettings: {
+        ...currentSettings,
+        [key]: value,
+      },
+    });
+  };
+
+  const handleEmbeddingSettingsChange = (key: keyof EmbeddingSettings, value: any) => {
+    const currentSettings: EmbeddingSettings = data.embeddingSettings || {
+      model: 'text-embedding-3-small',
+      dimensions: 1536,
+      batchSize: 100,
+      storeInDb: true,
+    };
+    
+    updateNodeData(selectedNodeId!, {
+      embeddingSettings: {
+        ...currentSettings,
+        [key]: value,
+      },
+    });
+  };
+
   const assistantSettings: AssistantSettings = data.assistantSettings || {
     mode: 'expand',
     tone: 'creative',
@@ -205,6 +250,20 @@ export const PropertiesSidebar: React.FC = () => {
     includeMetadata: true,
     separator: '\n\n---\n\n',
     format: 'structured',
+  };
+
+  const chunkerSettings: ChunkerSettings = data.chunkerSettings || {
+    strategy: 'paragraph',
+    chunkSize: 500,
+    overlap: 50,
+    preserveSentences: true,
+  };
+
+  const embeddingSettings: EmbeddingSettings = data.embeddingSettings || {
+    model: 'text-embedding-3-small',
+    dimensions: 1536,
+    batchSize: 100,
+    storeInDb: true,
   };
 
   const creativityLabel = () => {
@@ -618,6 +677,210 @@ export const PropertiesSidebar: React.FC = () => {
                   className="bg-background/50 border-border/50"
                 />
               </div>
+            </div>
+          </>
+        )}
+
+        {/* Chunker Settings */}
+        {data.type === 'chunker' && (
+          <>
+            <Separator className="bg-border/50" />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Scissors className="w-4 h-4 text-violet-400" />
+                Chunker Settings
+              </h3>
+
+              {/* Strategy */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Chunking Strategy
+                </Label>
+                <Select
+                  value={chunkerSettings.strategy}
+                  onValueChange={(value: ChunkStrategy) => handleChunkerSettingsChange('strategy', value)}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    {chunkStrategyOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium">{opt.label}</div>
+                            <div className="text-xs text-muted-foreground">{opt.description}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Chunk Size */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Chunk Size (tokens)
+                  </Label>
+                  <span className="text-sm font-mono text-foreground">
+                    {chunkerSettings.chunkSize}
+                  </span>
+                </div>
+                <Slider
+                  value={[chunkerSettings.chunkSize]}
+                  onValueChange={([value]) => handleChunkerSettingsChange('chunkSize', value)}
+                  min={100}
+                  max={2000}
+                  step={50}
+                  className="py-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Target size for each text chunk
+                </p>
+              </div>
+
+              {/* Overlap */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Overlap (tokens)
+                  </Label>
+                  <span className="text-sm font-mono text-foreground">
+                    {chunkerSettings.overlap}
+                  </span>
+                </div>
+                <Slider
+                  value={[chunkerSettings.overlap]}
+                  onValueChange={([value]) => handleChunkerSettingsChange('overlap', value)}
+                  min={0}
+                  max={500}
+                  step={10}
+                  className="py-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Overlap between consecutive chunks
+                </p>
+              </div>
+
+              <Separator className="bg-border/50" />
+
+              {/* Preserve Sentences */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-foreground">Preserve Sentences</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Avoid splitting in the middle of sentences
+                  </p>
+                </div>
+                <Switch
+                  checked={chunkerSettings.preserveSentences}
+                  onCheckedChange={(checked) => handleChunkerSettingsChange('preserveSentences', checked)}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Embedding Settings */}
+        {data.type === 'embedding' && (
+          <>
+            <Separator className="bg-border/50" />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Binary className="w-4 h-4 text-emerald-400" />
+                Embedding Settings
+              </h3>
+
+              {/* Model */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  Embedding Model
+                </Label>
+                <Select
+                  value={embeddingSettings.model}
+                  onValueChange={(value: EmbeddingModel) => {
+                    const modelInfo = embeddingModelOptions.find(m => m.value === value);
+                    handleEmbeddingSettingsChange('model', value);
+                    if (modelInfo) {
+                      handleEmbeddingSettingsChange('dimensions', modelInfo.dimensions);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    {embeddingModelOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium">{opt.label}</div>
+                            <div className="text-xs text-muted-foreground">{opt.dimensions} dimensions</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Batch Size */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Batch Size
+                  </Label>
+                  <span className="text-sm font-mono text-foreground">
+                    {embeddingSettings.batchSize}
+                  </span>
+                </div>
+                <Slider
+                  value={[embeddingSettings.batchSize]}
+                  onValueChange={([value]) => handleEmbeddingSettingsChange('batchSize', value)}
+                  min={10}
+                  max={500}
+                  step={10}
+                  className="py-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Process chunks in batches for efficiency
+                </p>
+              </div>
+
+              <Separator className="bg-border/50" />
+
+              {/* Store in DB */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-foreground">Store in Database</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Save embeddings to document_chunks table
+                  </p>
+                </div>
+                <Switch
+                  checked={embeddingSettings.storeInDb}
+                  onCheckedChange={(checked) => handleEmbeddingSettingsChange('storeInDb', checked)}
+                />
+              </div>
+
+              {/* Knowledge Base ID */}
+              {embeddingSettings.storeInDb && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Knowledge Base ID (Optional)
+                  </Label>
+                  <Input
+                    placeholder="Auto-generate if empty"
+                    value={embeddingSettings.knowledgeBaseId || ''}
+                    onChange={(e) => handleEmbeddingSettingsChange('knowledgeBaseId', e.target.value || undefined)}
+                    className="bg-background/50 border-border/50 font-mono text-sm"
+                  />
+                </div>
+              )}
             </div>
           </>
         )}
