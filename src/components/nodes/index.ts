@@ -15,6 +15,7 @@ import { RetrieverNode } from './RetrieverNode';
 import { ContextAssemblerNode } from './ContextAssemblerNode';
 import { VectorStoreNode } from './VectorStoreNode';
 import { FileUploadNode } from './FileUploadNode';
+import { ApiConnectorNode } from './ApiConnectorNode';
 
 export const nodeTypes = {
   textNode: TextNode,
@@ -34,6 +35,7 @@ export const nodeTypes = {
   contextAssemblerNode: ContextAssemblerNode,
   vectorStoreNode: VectorStoreNode,
   fileUploadNode: FileUploadNode,
+  apiConnectorNode: ApiConnectorNode,
 };
 
 export { 
@@ -54,4 +56,5 @@ export {
   ContextAssemblerNode,
   VectorStoreNode,
   FileUploadNode,
+  ApiConnectorNode,
 };

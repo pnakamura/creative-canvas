@@ -23,6 +23,7 @@ import {
   LayoutTemplate,
   Zap,
   Eraser,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,6 +85,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onExecuteFlow }) => {
   const processorNodes = [
     { type: 'assistant' as NodeType, label: 'AI Assistant', icon: Sparkles, color: 'text-secondary' },
     { type: 'textAnalyzer' as NodeType, label: 'Text Analyzer', icon: FileSearch, color: 'text-cyan-400' },
+    { type: 'apiConnector' as NodeType, label: 'API Connector', icon: Globe, color: 'text-blue-400' },
     { type: 'chunker' as NodeType, label: 'Chunker', icon: Scissors, color: 'text-amber-400' },
     { type: 'embedding' as NodeType, label: 'Embedding', icon: Binary, color: 'text-violet-400' },
     { type: 'retriever' as NodeType, label: 'Retriever', icon: Search, color: 'text-emerald-400' },
