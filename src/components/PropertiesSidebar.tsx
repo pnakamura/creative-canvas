@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Settings2, Type, Sparkles, Image, Video, FileText, Wand2, Brain, Lightbulb, Pencil, MessageSquare, FileSearch, BarChart3, Presentation, Network, FileCheck, GitCompare, BookOpen, FileSpreadsheet, Search, Layers, Scissors, Binary, Database } from 'lucide-react';
+import { X, Settings2, Type, Sparkles, Image, Video, FileText, Wand2, Brain, Lightbulb, Pencil, MessageSquare, FileSearch, BarChart3, Presentation, Network, FileCheck, GitCompare, BookOpen, FileSpreadsheet, Search, Layers, Scissors, Binary, Database, GitBranch, GripVertical, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings, RetrieverSettings, ContextAssemblerSettings, ContextFormat, ChunkerSettings, ChunkStrategy, EmbeddingSettings, EmbeddingModel, VectorStoreSettings } from '@/store/flowStore';
+import { useFlowStore, AssistantMode, AssistantTone, AssistantSettings, AnalyzerOutputType, AnalyzerDepth, AnalyzerFormat, AnalyzerSettings, RetrieverSettings, ContextAssemblerSettings, ContextFormat, ChunkerSettings, ChunkStrategy, EmbeddingSettings, EmbeddingModel, VectorStoreSettings, RouterSettings, RouterCondition } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -82,6 +82,12 @@ const vectorStoreSortOptions: { value: 'date' | 'name' | 'chunks'; label: string
   { value: 'date', label: 'Last Updated' },
   { value: 'name', label: 'Name' },
   { value: 'chunks', label: 'Chunk Count' },
+];
+
+const routerDefaultBehaviorOptions: { value: 'continue' | 'stop' | 'error'; label: string; description: string }[] = [
+  { value: 'continue', label: 'Continue', description: 'Continue to default output' },
+  { value: 'stop', label: 'Stop', description: 'Stop execution if no match' },
+  { value: 'error', label: 'Error', description: 'Throw error if no match' },
 ];
 
 export const PropertiesSidebar: React.FC = () => {
@@ -295,6 +301,42 @@ export const PropertiesSidebar: React.FC = () => {
     sortBy: 'date',
     sortOrder: 'desc',
     autoRefresh: false,
+  };
+
+  const routerSettings: RouterSettings = data.routerSettings || {
+    conditions: [],
+    evaluateAll: false,
+    defaultBehavior: 'continue',
+  };
+
+  const handleRouterSettingsChange = (key: keyof RouterSettings, value: any) => {
+    updateNodeData(selectedNodeId!, {
+      routerSettings: {
+        ...routerSettings,
+        [key]: value,
+      },
+    });
+  };
+
+  const moveCondition = (index: number, direction: 'up' | 'down') => {
+    const conditions = [...routerSettings.conditions];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= conditions.length) return;
+    
+    [conditions[index], conditions[newIndex]] = [conditions[newIndex], conditions[index]];
+    handleRouterSettingsChange('conditions', conditions);
+  };
+
+  const deleteCondition = (conditionId: string) => {
+    const conditions = routerSettings.conditions.filter(c => c.id !== conditionId);
+    handleRouterSettingsChange('conditions', conditions);
+  };
+
+  const toggleConditionEnabled = (conditionId: string) => {
+    const conditions = routerSettings.conditions.map(c => 
+      c.id === conditionId ? { ...c, enabled: !c.enabled } : c
+    );
+    handleRouterSettingsChange('conditions', conditions);
   };
 
   const creativityLabel = () => {
@@ -1207,6 +1249,182 @@ export const PropertiesSidebar: React.FC = () => {
                         {(data.chunkCount as number) || 0} chunks loaded
                       </Badge>
                     </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Router Settings */}
+        {data.type === 'router' && (
+          <>
+            <Separator className="bg-border/50" />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <GitBranch className="w-4 h-4 text-amber-400" />
+                Router Settings
+              </h3>
+
+              {/* Evaluate All */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-foreground">Evaluate All</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Check all conditions instead of stopping at first match
+                  </p>
+                </div>
+                <Switch
+                  checked={routerSettings.evaluateAll}
+                  onCheckedChange={(checked) => handleRouterSettingsChange('evaluateAll', checked)}
+                />
+              </div>
+
+              {/* Default Behavior */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                  No Match Behavior
+                </Label>
+                <Select
+                  value={routerSettings.defaultBehavior}
+                  onValueChange={(value: 'continue' | 'stop' | 'error') => handleRouterSettingsChange('defaultBehavior', value)}
+                >
+                  <SelectTrigger className="bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel border-border/50">
+                    {routerDefaultBehaviorOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div>
+                          <div className="font-medium">{opt.label}</div>
+                          <div className="text-xs text-muted-foreground">{opt.description}</div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator className="bg-border/50" />
+
+              {/* Conditions List with Reordering */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Conditions ({routerSettings.conditions.length})
+                  </Label>
+                </div>
+
+                {routerSettings.conditions.length === 0 ? (
+                  <div className="p-3 rounded-md bg-muted/30 border border-border/50 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      No conditions configured. Add conditions in the node.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {routerSettings.conditions.map((condition, index) => (
+                      <div
+                        key={condition.id}
+                        className={cn(
+                          "p-2 rounded-md border transition-colors",
+                          condition.enabled
+                            ? "bg-background/50 border-border/50"
+                            : "bg-muted/20 border-border/30 opacity-60"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <GripVertical className="w-3 h-3 text-muted-foreground" />
+                          
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {condition.name || `Condition ${index + 1}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {condition.field} {condition.operator} {condition.value}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => moveCondition(index, 'up')}
+                              disabled={index === 0}
+                            >
+                              <ArrowUp className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => moveCondition(index, 'down')}
+                              disabled={index === routerSettings.conditions.length - 1}
+                            >
+                              <ArrowDown className="w-3 h-3" />
+                            </Button>
+                            <Switch
+                              checked={condition.enabled}
+                              onCheckedChange={() => toggleConditionEnabled(condition.id)}
+                              className="scale-75"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => deleteCondition(condition.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Evaluation Results */}
+              {data.routerData?.lastEvaluatedAt && (
+                <>
+                  <Separator className="bg-border/50" />
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                      Last Evaluation
+                    </Label>
+                    <div className="p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                      <p className="text-xs text-amber-400 mb-1">
+                        {new Date(data.routerData.lastEvaluatedAt).toLocaleString()}
+                      </p>
+                      {data.routerData.matchedBranch ? (
+                        <p className="text-xs text-foreground">
+                          Matched: <span className="font-medium text-green-400">{data.routerData.matchedBranch}</span>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">No conditions matched</p>
+                      )}
+                    </div>
+                    {data.routerData.evaluationResults && (
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(data.routerData.evaluationResults).map(([condId, matched]) => {
+                          const cond = routerSettings.conditions.find(c => c.id === condId);
+                          return (
+                            <Badge
+                              key={condId}
+                              variant="outline"
+                              className={cn(
+                                "text-xs",
+                                matched ? "border-green-500/50 text-green-400" : "border-red-500/50 text-red-400"
+                              )}
+                            >
+                              {cond?.name || condId}: {matched ? '✓' : '✗'}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
