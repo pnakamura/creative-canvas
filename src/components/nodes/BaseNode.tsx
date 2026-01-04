@@ -2,12 +2,12 @@ import React, { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { useFlowStore, NodeData, NodeCategory } from '@/store/flowStore';
-import { LucideIcon, Loader2, Play } from 'lucide-react';
+import { LucideIcon, Loader2, Play, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 interface BaseNodeProps extends NodeProps {
   icon: LucideIcon;
   iconColor?: string;
@@ -167,16 +167,40 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
             )}
           </div>
 
-          {/* Status indicators */}
+          {/* Status indicators - larger and with tooltips */}
           <div className="flex-shrink-0">
             {currentlyProcessing && (
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/20 border border-primary/30">
+                    <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                    <span className="text-[10px] font-medium text-primary">Running</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">Processing...</TooltipContent>
+              </Tooltip>
             )}
             {isComplete && !currentlyProcessing && !error && (
-              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 border border-green-500/30">
+                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                    <span className="text-[10px] font-medium text-green-500">Done</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">Completed successfully</TooltipContent>
+              </Tooltip>
             )}
             {error && !currentlyProcessing && (
-              <div className="w-2 h-2 rounded-full bg-destructive" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-destructive/20 border border-destructive/30">
+                    <AlertCircle className="w-3 h-3 text-destructive" />
+                    <span className="text-[10px] font-medium text-destructive">Error</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">{error}</TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>

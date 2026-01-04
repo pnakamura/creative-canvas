@@ -436,6 +436,21 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
         ]}
       >
         <div className="space-y-2 min-w-[200px]">
+          {/* Success Banner - shown when file is loaded */}
+          {isComplete && fileUploadData?.fileName && !isProcessing && !uploadProgress && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-green-500/15 border border-green-500/40 animate-fade-in">
+              <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-green-500">
+                  Arquivo carregado
+                </p>
+                <p className="text-[10px] text-green-500/80 truncate">
+                  Pronto para processamento
+                </p>
+              </div>
+            </div>
+          )}
+
           {isProcessing || uploadProgress > 0 ? (
             <div className="flex flex-col items-center justify-center py-4 gap-3">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
