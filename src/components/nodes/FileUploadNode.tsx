@@ -1,12 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { NodeProps } from '@xyflow/react';
-import { Upload, FileText, File, X, Eye, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, File, X, Eye, Loader2, CheckCircle2, AlertCircle, FileCode, FileType } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { BaseNode } from './BaseNode';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { useFlowStore, NodeData } from '@/store/flowStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,6 +31,34 @@ interface FileMetadata {
   extractedAt: string;
 }
 
+const FILE_TYPE_CONFIG: Record<string, { label: string; badgeClass: string; iconClass: string }> = {
+  pdf: { 
+    label: 'PDF', 
+    badgeClass: 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30',
+    iconClass: 'text-red-400'
+  },
+  docx: { 
+    label: 'DOCX', 
+    badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30',
+    iconClass: 'text-blue-400'
+  },
+  text: { 
+    label: 'TXT', 
+    badgeClass: 'bg-gray-500/20 text-gray-400 border-gray-500/30 hover:bg-gray-500/30',
+    iconClass: 'text-gray-400'
+  },
+  markdown: { 
+    label: 'MD', 
+    badgeClass: 'bg-purple-500/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/30',
+    iconClass: 'text-purple-400'
+  },
+  html: { 
+    label: 'HTML', 
+    badgeClass: 'bg-orange-500/20 text-orange-400 border-orange-500/30 hover:bg-orange-500/30',
+    iconClass: 'text-orange-400'
+  },
+};
+
 export const FileUploadNode: React.FC<NodeProps> = (props) => {
   const { updateNodeData } = useFlowStore();
   const nodeData = props.data as NodeData;
@@ -43,6 +73,10 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
 
+  const getFileTypeConfig = (type?: string) => {
+    return FILE_TYPE_CONFIG[type || 'text'] || FILE_TYPE_CONFIG.text;
+  };
+
   const getFileTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {
       'pdf': 'PDF Document',
@@ -54,14 +88,21 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
     return labels[type] || 'Document';
   };
 
-  const getFileIcon = (type?: string) => {
+  const getFileIcon = (type?: string, size: 'sm' | 'lg' = 'lg') => {
+    const config = getFileTypeConfig(type);
+    const sizeClass = size === 'sm' ? 'w-4 h-4' : 'w-6 h-6';
+    
     switch (type) {
       case 'pdf':
-        return <FileText className="w-6 h-6 text-red-400" />;
+        return <FileText className={cn(sizeClass, config.iconClass)} />;
       case 'docx':
-        return <FileText className="w-6 h-6 text-blue-400" />;
+        return <FileText className={cn(sizeClass, config.iconClass)} />;
+      case 'markdown':
+        return <FileType className={cn(sizeClass, config.iconClass)} />;
+      case 'html':
+        return <FileCode className={cn(sizeClass, config.iconClass)} />;
       default:
-        return <File className="w-6 h-6 text-primary" />;
+        return <File className={cn(sizeClass, config.iconClass)} />;
     }
   };
 
@@ -228,90 +269,151 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
     if (!fileUploadData?.fileName) return null;
 
     const metadata = fileUploadData.metadata;
+    const typeConfig = getFileTypeConfig(fileUploadData.fileType);
+    const fileName = fileUploadData.fileName;
+    const isLongName = fileName.length > 20;
 
     return (
       <div className="space-y-2">
-        {/* File Header */}
-        <div className="flex items-center gap-2 p-2 rounded-lg bg-background/50 border border-border/50">
-          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
-            {getFileIcon(fileUploadData.fileType)}
+        {/* File Header with Type Badge */}
+        <div className={cn(
+          "flex items-center gap-3 p-2.5 rounded-lg border transition-colors",
+          "bg-background/50",
+          fileUploadData.fileType === 'pdf' && "border-red-500/30",
+          fileUploadData.fileType === 'docx' && "border-blue-500/30",
+          fileUploadData.fileType === 'markdown' && "border-purple-500/30",
+          fileUploadData.fileType === 'html' && "border-orange-500/30",
+          fileUploadData.fileType === 'text' && "border-gray-500/30",
+          !fileUploadData.fileType && "border-border/50"
+        )}>
+          {/* Icon with colored background */}
+          <div className={cn(
+            "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+            fileUploadData.fileType === 'pdf' && "bg-red-500/10",
+            fileUploadData.fileType === 'docx' && "bg-blue-500/10",
+            fileUploadData.fileType === 'markdown' && "bg-purple-500/10",
+            fileUploadData.fileType === 'html' && "bg-orange-500/10",
+            fileUploadData.fileType === 'text' && "bg-gray-500/10",
+            !fileUploadData.fileType && "bg-muted"
+          )}>
+            {getFileIcon(fileUploadData.fileType, 'lg')}
           </div>
+          
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-foreground truncate">
-              {fileUploadData.fileName}
-            </p>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <span className="uppercase">{fileUploadData.fileType}</span>
+            {/* File name with tooltip for long names */}
+            {isLongName ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className="text-xs font-medium text-foreground truncate cursor-default">
+                    {fileName}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="break-all">{fileName}</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <p className="text-xs font-medium text-foreground truncate">
+                {fileName}
+              </p>
+            )}
+            
+            {/* Type badge and file size */}
+            <div className="flex items-center gap-2 mt-1">
+              <Badge 
+                variant="outline" 
+                className={cn("text-[9px] px-1.5 py-0 h-4 font-semibold", typeConfig.badgeClass)}
+              >
+                {typeConfig.label}
+              </Badge>
               {fileUploadData.fileSize && (
-                <>
-                  <span>•</span>
-                  <span>{formatFileSize(fileUploadData.fileSize)}</span>
-                </>
+                <span className="text-[10px] text-muted-foreground">
+                  {formatFileSize(fileUploadData.fileSize)}
+                </span>
               )}
             </div>
           </div>
-          <div className="flex gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="nodrag h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPreviewOpen(true);
-              }}
-            >
-              <Eye className="w-3 h-3" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="nodrag h-6 w-6 text-destructive hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                clearFile();
-              }}
-            >
-              <X className="w-3 h-3" />
-            </Button>
+          
+          {/* Action buttons */}
+          <div className="flex gap-1 flex-shrink-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="nodrag h-7 w-7"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewOpen(true);
+                  }}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Preview</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="nodrag h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearFile();
+                  }}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Remove file</TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
-        {/* Metadata */}
+        {/* Metadata stats */}
         {metadata && (
-          <div className="grid grid-cols-2 gap-1 text-[10px] text-muted-foreground px-1">
-            <div>
-              <span className="text-foreground/80">{metadata.characterCount.toLocaleString()}</span> chars
+          <div className="flex items-center gap-3 text-[10px] text-muted-foreground px-1">
+            <div className="flex items-center gap-1">
+              <span className="text-foreground/80 font-medium">{metadata.characterCount.toLocaleString()}</span>
+              <span>chars</span>
             </div>
-            <div>
-              <span className="text-foreground/80">{metadata.wordCount.toLocaleString()}</span> words
+            <span className="text-border">•</span>
+            <div className="flex items-center gap-1">
+              <span className="text-foreground/80 font-medium">{metadata.wordCount.toLocaleString()}</span>
+              <span>words</span>
             </div>
             {metadata.pages && (
-              <div className="col-span-2">
-                <span className="text-foreground/80">{metadata.pages}</span> pages
-              </div>
+              <>
+                <span className="text-border">•</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-foreground/80 font-medium">{metadata.pages}</span>
+                  <span>pages</span>
+                </div>
+              </>
             )}
           </div>
         )}
 
         {/* Text Preview */}
         {fileUploadData.extractedText && (
-          <div className="p-2 rounded bg-muted/50 border border-border/30">
-            <p className="text-[10px] text-muted-foreground line-clamp-4">
+          <div className="p-2 rounded-lg bg-muted/50 border border-border/30">
+            <p className="text-[10px] text-muted-foreground line-clamp-3 leading-relaxed">
               {getTextPreview()}
             </p>
           </div>
         )}
 
         {/* Status indicator */}
-        <div className="flex items-center gap-1.5 text-[10px]">
+        <div className="flex items-center gap-1.5 text-[10px] px-1">
           {isComplete ? (
             <>
-              <CheckCircle2 className="w-3 h-3 text-green-500" />
-              <span className="text-green-500">Extracted successfully</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+              <span className="text-green-500 font-medium">Extracted successfully</span>
             </>
           ) : error ? (
             <>
-              <AlertCircle className="w-3 h-3 text-destructive" />
+              <AlertCircle className="w-3.5 h-3.5 text-destructive" />
               <span className="text-destructive">{error}</span>
             </>
           ) : null}
