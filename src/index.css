@@ -336,3 +336,86 @@
 .react-flow__minimap {
   @apply glass-panel rounded-lg overflow-hidden !important;
 }
+
+/* Handle labels */
+.handle-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.handle-label {
+  position: absolute;
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.handle-label-left {
+  right: calc(100% + 8px);
+  color: hsl(var(--muted-foreground));
+}
+
+.handle-label-right {
+  left: calc(100% + 8px);
+  color: hsl(var(--muted-foreground));
+}
+
+/* Handle compatibility states for drag-and-drop */
+.flow-handle.compatible {
+  animation: pulse-compatible 1s infinite;
+  box-shadow: 0 0 8px hsl(var(--node-glow));
+}
+
+.flow-handle.incompatible {
+  opacity: 0.3;
+}
+
+@keyframes pulse-compatible {
+  0%, 100% {
+    box-shadow: 0 0 4px hsl(var(--node-glow) / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 12px hsl(var(--node-glow));
+  }
+}
+
+/* Edge label container */
+.edge-label-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.edge-delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.edge-label-container:hover .edge-delete-btn {
+  opacity: 1;
+}
+
+.edge-delete-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Edge custom label */
+.edge-custom-label {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: hsl(var(--background) / 0.9);
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -137,7 +137,7 @@ export const validateConnection = (
   };
 };
 
-const getNodeLabel = (type: NodeType): string => {
+export const getNodeLabel = (type: NodeType): string => {
   const labels: Record<NodeType, string> = {
     text: 'Text Input',
     assistant: 'AI Assistant',
@@ -207,4 +207,24 @@ export const isRagConnection = (sourceType: NodeType, targetType: NodeType): boo
   return ragPipelineConnections.some(
     ([source, target]) => source === sourceType && target === targetType
   );
+};
+
+// Get compatible target nodes for a given source node type
+export const getCompatibleTargets = (sourceType: NodeType): NodeType[] => {
+  return connectionRules[sourceType]?.validTargets || [];
+};
+
+// Get compatible source nodes for a given target node type
+export const getCompatibleSources = (targetType: NodeType): NodeType[] => {
+  return connectionRules[targetType]?.validSources || [];
+};
+
+// Get handle type label for display
+export const getHandleTypeLabel = (type: 'text' | 'image' | 'context'): string => {
+  switch (type) {
+    case 'text': return 'Text';
+    case 'image': return 'Image';
+    case 'context': return 'Context';
+    default: return type;
+  }
 };
