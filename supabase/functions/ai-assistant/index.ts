@@ -123,9 +123,9 @@ serve(async (req) => {
       preserveStyle = false,
     } = await req.json();
     
-    if (!prompt && !context && !hasImage) {
+    if (!prompt && !context && !ragContext && !hasImage) {
       return new Response(
-        JSON.stringify({ error: "Prompt, context, or image is required" }),
+        JSON.stringify({ error: "Prompt, context, RAG context, or image is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -188,6 +188,18 @@ IMPORTANT: Base your response primarily on this retrieved context. If the contex
     
     if (!prompt && context) {
       textMessage = `Based on the following reference document, ${mode === 'analyze' ? 'analyze and extract visual elements' : 'create a detailed image generation prompt'} that captures its essence, themes, and visual style:\n\n${context.substring(0, 5000)}`;
+    }
+
+    // Handle RAG-only mode (no prompt, no context, but has ragContext)
+    if (!prompt && !context && ragContext && !hasImage) {
+      const modeInstructions: Record<string, string> = {
+        expand: 'Based on the retrieved knowledge context provided in the system prompt, create a comprehensive and detailed response that synthesizes the information.',
+        analyze: 'Analyze the retrieved knowledge context provided in the system prompt and provide structured insights, key themes, and actionable takeaways.',
+        brainstorm: 'Using the retrieved knowledge context provided in the system prompt, brainstorm creative ideas, applications, and innovative suggestions.',
+        refine: 'Synthesize and refine the information from the retrieved knowledge context, creating a polished and coherent summary.',
+        freestyle: 'Based on the retrieved knowledge context provided in the system prompt, provide a helpful and informative response.',
+      };
+      textMessage = modeInstructions[mode] || modeInstructions.freestyle;
     }
 
     if (hasImage && imageUrl) {
