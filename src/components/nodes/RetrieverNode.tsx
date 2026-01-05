@@ -88,9 +88,13 @@ export const RetrieverNode: React.FC<NodeProps> = (props) => {
     }
   }, [props.id, currentQuery, connectedKbId, settings, updateNodeData]);
 
+  // Use ref to avoid infinite loop - ref doesn't cause re-renders
+  const handleRunRef = React.useRef(handleRun);
+  handleRunRef.current = handleRun;
+
   React.useEffect(() => {
-    updateNodeData(props.id, { onRun: handleRun });
-  }, [handleRun]);
+    updateNodeData(props.id, { onRun: () => handleRunRef.current() });
+  }, [props.id, updateNodeData]);
 
   const retrievedDocs = nodeData.retrievedDocuments as Array<{ content: string; similarity: number; document_name?: string }> | undefined;
   const retrievedCount = retrievedDocs?.length || 0;
