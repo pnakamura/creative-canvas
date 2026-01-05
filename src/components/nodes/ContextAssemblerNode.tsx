@@ -32,9 +32,13 @@ export const ContextAssemblerNode: React.FC<NodeProps> = (props) => {
     updateNodeData(props.id, { isProcessing: true, error: undefined });
 
     try {
+      // IMPORTANTE: Buscar inputs FRESCOS do store no momento da execução
+      const { getConnectedNodes } = useFlowStore.getState();
+      const { inputs: freshInputs } = getConnectedNodes(props.id);
+      
       let retrievedDocuments: Array<{ content: string; similarity: number; document_name?: string; chunk_index?: number }> = [];
 
-      for (const input of inputs) {
+      for (const input of freshInputs) {
         const inputData = input.data as NodeData;
         if (inputData.retrievedDocuments) {
           retrievedDocuments = [...retrievedDocuments, ...inputData.retrievedDocuments];
@@ -92,7 +96,7 @@ export const ContextAssemblerNode: React.FC<NodeProps> = (props) => {
       updateNodeData(props.id, { error: errorMessage, isProcessing: false, isComplete: false });
       toast.error(errorMessage);
     }
-  }, [props.id, inputs, settings, updateNodeData]);
+  }, [props.id, settings, updateNodeData]);
 
   // Use ref to avoid infinite loop - ref doesn't cause re-renders
   const handleRunRef = React.useRef(handleRun);
