@@ -1,22 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { toast } from 'sonner';
 import { Loader2, Sparkles } from 'lucide-react';
 import { z } from 'zod';
 
-const emailSchema = z.string().email('Email inválido');
-const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
-
 const Auth = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, loading, signIn, signUp } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const emailSchema = z.string().email(t('auth.invalidEmail'));
+  const passwordSchema = z.string().min(6, t('auth.passwordMin'));
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
@@ -52,12 +56,12 @@ const Auth = () => {
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        toast.error('Email ou senha incorretos');
+        toast.error(t('auth.invalidCredentials'));
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success('Login realizado com sucesso!');
+      toast.success(t('auth.loginSuccess'));
       navigate('/dashboard');
     }
   };
@@ -81,12 +85,12 @@ const Auth = () => {
 
     if (error) {
       if (error.message.includes('User already registered')) {
-        toast.error('Este email já está cadastrado');
+        toast.error(t('auth.emailRegistered'));
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success('Conta criada com sucesso!');
+      toast.success(t('auth.accountCreated'));
       navigate('/dashboard');
     }
   };
@@ -101,6 +105,12 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+      {/* Theme and Language controls */}
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <LanguageSelector />
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
@@ -114,8 +124,8 @@ const Auth = () => {
           <Tabs defaultValue="login" className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+                <TabsTrigger value="login">{t('auth.login')}</TabsTrigger>
+                <TabsTrigger value="signup">{t('auth.signup')}</TabsTrigger>
               </TabsList>
             </CardHeader>
 
@@ -123,10 +133,10 @@ const Auth = () => {
               <form onSubmit={handleLogin}>
                 <CardContent className="space-y-4">
                   <CardDescription className="text-center">
-                    Entre com sua conta para acessar seus projetos
+                    {t('auth.loginDescription')}
                   </CardDescription>
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email">{t('auth.email')}</Label>
                     <Input
                       id="login-email"
                       type="email"
@@ -137,7 +147,7 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Senha</Label>
+                    <Label htmlFor="login-password">{t('auth.password')}</Label>
                     <Input
                       id="login-password"
                       type="password"
@@ -153,10 +163,10 @@ const Auth = () => {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Entrando...
+                        {t('auth.loggingIn')}
                       </>
                     ) : (
-                      'Entrar'
+                      t('auth.login')
                     )}
                   </Button>
                 </CardFooter>
@@ -167,10 +177,10 @@ const Auth = () => {
               <form onSubmit={handleSignup}>
                 <CardContent className="space-y-4">
                   <CardDescription className="text-center">
-                    Crie sua conta para começar a criar
+                    {t('auth.signupDescription')}
                   </CardDescription>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nome (opcional)</Label>
+                    <Label htmlFor="signup-name">{t('auth.name')}</Label>
                     <Input
                       id="signup-name"
                       type="text"
@@ -180,7 +190,7 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email">{t('auth.email')}</Label>
                     <Input
                       id="signup-email"
                       type="email"
@@ -191,7 +201,7 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Senha</Label>
+                    <Label htmlFor="signup-password">{t('auth.password')}</Label>
                     <Input
                       id="signup-password"
                       type="password"
@@ -207,10 +217,10 @@ const Auth = () => {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Criando conta...
+                        {t('auth.creatingAccount')}
                       </>
                     ) : (
-                      'Criar Conta'
+                      t('auth.signup')
                     )}
                   </Button>
                 </CardFooter>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectStore, Project } from '@/store/projectStore';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { toast } from 'sonner';
 import { 
   Plus, 
@@ -43,12 +46,15 @@ import {
   Loader2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR, enUS } from 'date-fns/locale';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { user, loading: authLoading, signOut } = useAuth();
   const { projects, isLoading, fetchProjects, createProject, updateProject, deleteProject } = useProjectStore();
+
+  const dateLocale = i18n.language === 'pt-BR' ? ptBR : enUS;
 
   // Dialogs state
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
@@ -75,7 +81,7 @@ const Dashboard = () => {
 
   const handleCreateProject = async () => {
     if (!projectName.trim()) {
-      toast.error('Digite um nome para o projeto');
+      toast.error(t('dashboard.enterProjectName'));
       return;
     }
 
@@ -84,13 +90,13 @@ const Dashboard = () => {
     setIsSubmitting(false);
 
     if (project) {
-      toast.success('Projeto criado!');
+      toast.success(t('dashboard.projectCreated'));
       setIsNewDialogOpen(false);
       setProjectName('');
       setProjectDescription('');
       navigate(`/project/${project.id}`);
     } else {
-      toast.error('Erro ao criar projeto');
+      toast.error(t('dashboard.errorCreating'));
     }
   };
 
@@ -104,7 +110,7 @@ const Dashboard = () => {
     });
     setIsSubmitting(false);
 
-    toast.success('Projeto atualizado!');
+    toast.success(t('dashboard.projectUpdated'));
     setIsEditDialogOpen(false);
     setSelectedProject(null);
     setProjectName('');
@@ -115,7 +121,7 @@ const Dashboard = () => {
     if (!selectedProject) return;
 
     await deleteProject(selectedProject.id);
-    toast.success('Projeto excluído');
+    toast.success(t('dashboard.projectDeleted'));
     setIsDeleteDialogOpen(false);
     setSelectedProject(null);
   };
@@ -156,10 +162,12 @@ const Dashboard = () => {
             </div>
             <h1 className="text-xl font-semibold">CreativeFlow</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground hidden sm:inline">
               {user?.email}
             </span>
+            <LanguageSelector />
+            <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
               <LogOut className="w-4 h-4" />
             </Button>
@@ -171,14 +179,14 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold">Meus Projetos</h2>
+            <h2 className="text-2xl font-bold">{t('dashboard.myProjects')}</h2>
             <p className="text-muted-foreground mt-1">
-              Gerencie seus workflows criativos
+              {t('dashboard.manageWorkflows')}
             </p>
           </div>
           <Button onClick={() => setIsNewDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Novo Projeto
+            {t('dashboard.newProject')}
           </Button>
         </div>
 
@@ -201,13 +209,13 @@ const Dashboard = () => {
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                 <FolderOpen className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-medium mb-2">Nenhum projeto ainda</h3>
+              <h3 className="text-lg font-medium mb-2">{t('dashboard.noProjects')}</h3>
               <p className="text-muted-foreground text-center mb-6 max-w-sm">
-                Crie seu primeiro projeto para começar a construir workflows criativos com IA
+                {t('dashboard.noProjectsDescription')}
               </p>
               <Button onClick={() => setIsNewDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Criar Primeiro Projeto
+                {t('dashboard.createFirst')}
               </Button>
             </CardContent>
           </Card>
@@ -233,13 +241,13 @@ const Dashboard = () => {
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="bg-popover border-border">
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
                           openEditDialog(project);
                         }}>
                           <Pencil className="w-4 h-4 mr-2" />
-                          Editar
+                          {t('common.edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive"
@@ -249,7 +257,7 @@ const Dashboard = () => {
                           }}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Excluir
+                          {t('common.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -262,9 +270,9 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardFooter className="pt-2">
                   <span className="text-xs text-muted-foreground">
-                    Atualizado {formatDistanceToNow(new Date(project.updated_at), { 
+                    {t('dashboard.updated')} {formatDistanceToNow(new Date(project.updated_at), { 
                       addSuffix: true,
-                      locale: ptBR 
+                      locale: dateLocale 
                     })}
                   </span>
                 </CardFooter>
@@ -278,26 +286,26 @@ const Dashboard = () => {
       <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Projeto</DialogTitle>
+            <DialogTitle>{t('dashboard.newProject')}</DialogTitle>
             <DialogDescription>
-              Crie um novo workflow criativo
+              {t('dashboard.newWorkflow')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome do projeto</Label>
+              <Label htmlFor="name">{t('dashboard.projectName')}</Label>
               <Input
                 id="name"
-                placeholder="Meu Projeto Criativo"
+                placeholder={t('dashboard.placeholder')}
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Descrição (opcional)</Label>
+              <Label htmlFor="description">{t('dashboard.description')}</Label>
               <Input
                 id="description"
-                placeholder="Uma breve descrição..."
+                placeholder={t('dashboard.descriptionPlaceholder')}
                 value={projectDescription}
                 onChange={(e) => setProjectDescription(e.target.value)}
               />
@@ -305,16 +313,16 @@ const Dashboard = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsNewDialogOpen(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleCreateProject} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Criando...
+                  {t('dashboard.creating')}
                 </>
               ) : (
-                'Criar Projeto'
+                t('dashboard.createProject')
               )}
             </Button>
           </DialogFooter>
@@ -325,14 +333,14 @@ const Dashboard = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Projeto</DialogTitle>
+            <DialogTitle>{t('dashboard.editProject')}</DialogTitle>
             <DialogDescription>
-              Altere o nome ou descrição do projeto
+              {t('dashboard.editProjectDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Nome do projeto</Label>
+              <Label htmlFor="edit-name">{t('dashboard.projectName')}</Label>
               <Input
                 id="edit-name"
                 value={projectName}
@@ -340,7 +348,7 @@ const Dashboard = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Descrição (opcional)</Label>
+              <Label htmlFor="edit-description">{t('dashboard.description')}</Label>
               <Input
                 id="edit-description"
                 value={projectDescription}
@@ -350,16 +358,16 @@ const Dashboard = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleEditProject} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
+                  {t('dashboard.saving')}
                 </>
               ) : (
-                'Salvar'
+                t('common.save')
               )}
             </Button>
           </DialogFooter>
@@ -370,18 +378,18 @@ const Dashboard = () => {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir projeto?</AlertDialogTitle>
+            <AlertDialogTitle>{t('dashboard.deleteProject')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O projeto "{selectedProject?.name}" e todos os seus dados serão permanentemente excluídos.
+              {t('dashboard.deleteWarning', { name: selectedProject?.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDeleteProject}
             >
-              Excluir
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectStore } from '@/store/projectStore';
 import { useFlowStore } from '@/store/flowStore';
@@ -8,12 +9,15 @@ import { Toolbar } from '@/components/Toolbar';
 import { PropertiesSidebar } from '@/components/PropertiesSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Loader2, Check, Pencil } from 'lucide-react';
 
 const Project = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, loading: authLoading } = useAuth();
   const { 
     currentProject, 
@@ -49,12 +53,12 @@ const Project = () => {
           setEdges(data.edges);
           initialLoadRef.current = false;
         } else {
-          toast.error('Projeto não encontrado');
+          toast.error(t('project.notFound'));
           navigate('/dashboard');
         }
       });
     }
-  }, [id, user, loadProject, setNodes, setEdges, navigate]);
+  }, [id, user, loadProject, setNodes, setEdges, navigate, t]);
 
   // Track changes after initial load
   useEffect(() => {
@@ -90,9 +94,9 @@ const Project = () => {
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 2000);
     } catch (error) {
-      toast.error('Erro ao salvar projeto');
+      toast.error(t('project.saveError'));
     }
-  }, [currentProject, nodes, edges, saveProject]);
+  }, [currentProject, nodes, edges, saveProject, t]);
 
   const handleNameSave = async () => {
     if (!currentProject || !editedName.trim()) return;
@@ -184,17 +188,20 @@ const Project = () => {
             {isSaving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Salvando...
+                {t('project.saving')}
               </>
             ) : showSaved ? (
               <>
                 <Check className="w-4 h-4 text-green-500" />
-                Salvo
+                {t('project.saved')}
               </>
             ) : hasUnsavedChanges ? (
-              <span className="text-yellow-500">Alterações não salvas</span>
+              <span className="text-yellow-500">{t('project.unsavedChanges')}</span>
             ) : null}
           </div>
+          
+          <LanguageSelector />
+          <ThemeToggle />
           
           <Button 
             size="sm" 
@@ -202,7 +209,7 @@ const Project = () => {
             disabled={isSaving || !hasUnsavedChanges}
           >
             <Save className="w-4 h-4 mr-2" />
-            Salvar
+            {t('common.save')}
           </Button>
         </div>
       </header>
