@@ -361,21 +361,34 @@ export interface NodeData extends Record<string, unknown> {
 
 export type FlowNode = Node<NodeData>;
 
+// Edge data interface for custom edge properties
+export interface EdgeData extends Record<string, unknown> {
+  sourceType?: NodeType;
+  targetType?: NodeType;
+  isAnimated?: boolean;
+  label?: string;
+  description?: string;
+}
+
 interface FlowState {
   nodes: FlowNode[];
-  edges: Edge[];
+  edges: Edge<EdgeData>[];
   selectedNodeId: string | null;
+  selectedEdgeId: string | null;
   isExecuting: boolean;
   
   // Actions
   setNodes: (nodes: FlowNode[]) => void;
-  setEdges: (edges: Edge[]) => void;
+  setEdges: (edges: Edge<EdgeData>[]) => void;
   onNodesChange: (changes: NodeChange<FlowNode>[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
   addNode: (type: NodeType, position: { x: number; y: number }) => void;
   updateNodeData: (nodeId: string, data: Partial<NodeData>) => void;
+  updateEdgeData: (edgeId: string, data: Partial<EdgeData>) => void;
+  deleteEdge: (edgeId: string) => void;
   setSelectedNode: (nodeId: string | null) => void;
+  setSelectedEdge: (edgeId: string | null) => void;
   deleteNode: (nodeId: string) => void;
   setExecuting: (isExecuting: boolean) => void;
   getConnectedNodes: (nodeId: string) => { inputs: FlowNode[]; outputs: FlowNode[] };
@@ -505,6 +518,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   nodes: initialNodes,
   edges: initialEdges,
   selectedNodeId: null,
+  selectedEdgeId: null,
   isExecuting: false,
 
   setNodes: (nodes) => set({ nodes }),
@@ -677,7 +691,26 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     });
   },
 
+  updateEdgeData: (edgeId, data) => {
+    set({
+      edges: get().edges.map((edge) =>
+        edge.id === edgeId
+          ? { ...edge, data: { ...edge.data, ...data } }
+          : edge
+      ),
+    });
+  },
+
+  deleteEdge: (edgeId) => {
+    set({
+      edges: get().edges.filter((edge) => edge.id !== edgeId),
+      selectedEdgeId: get().selectedEdgeId === edgeId ? null : get().selectedEdgeId,
+    });
+  },
+
   setSelectedNode: (nodeId) => set({ selectedNodeId: nodeId }),
+
+  setSelectedEdge: (edgeId) => set({ selectedEdgeId: edgeId }),
 
   deleteNode: (nodeId) => {
     set({

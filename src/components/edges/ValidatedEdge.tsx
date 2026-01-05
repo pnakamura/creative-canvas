@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   BaseEdge,
   EdgeProps,
   getSmoothStepPath,
   EdgeLabelRenderer,
+  useReactFlow,
 } from '@xyflow/react';
-import { CheckCircle2, AlertCircle, XCircle, Zap } from 'lucide-react';
+import { CheckCircle2, AlertCircle, XCircle, Zap, X, Pencil } from 'lucide-react';
 import { 
   validateConnection, 
   isRagConnection,
   ConnectionValidity,
+  getNodeLabel,
 } from '@/lib/connectionValidation';
-import { NodeType } from '@/store/flowStore';
+import { NodeType, useFlowStore, EdgeData } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -19,39 +21,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 interface ValidatedEdgeProps extends EdgeProps {
-  data?: {
-    sourceType?: NodeType;
-    targetType?: NodeType;
-    isAnimated?: boolean;
-  };
+  data?: EdgeData;
 }
-
-const getNodeLabel = (type: NodeType): string => {
-  const labels: Record<NodeType, string> = {
-    text: 'Text Input',
-    assistant: 'AI Assistant',
-    imageGenerator: 'Image Generator',
-    videoGenerator: 'Video Generator',
-    reference: 'Reference',
-    textAnalyzer: 'Text Analyzer',
-    reportGenerator: 'Report Generator',
-    documentGenerator: 'Document Generator',
-    infographicGenerator: 'Infographic Generator',
-    presentationGenerator: 'Presentation Generator',
-    mindmapGenerator: 'Mindmap Generator',
-    chunker: 'Chunker',
-    embedding: 'Embedding',
-    retriever: 'Retriever',
-    contextAssembler: 'Context Assembler',
-    vectorStore: 'Vector Store',
-    fileUpload: 'File Upload',
-    apiConnector: 'API Connector',
-    router: 'Conditional Router',
-  };
-  return labels[type] || type;
-};
 
 export const ValidatedEdge: React.FC<ValidatedEdgeProps> = ({
   id,
@@ -66,9 +48,19 @@ export const ValidatedEdge: React.FC<ValidatedEdgeProps> = ({
   data,
   selected,
 }) => {
-  const sourceType = data?.sourceType;
-  const targetType = data?.targetType;
+  const { deleteElements } = useReactFlow();
+  const { updateEdgeData, setSelectedEdge } = useFlowStore();
+  
+  const sourceType = data?.sourceType as NodeType | undefined;
+  const targetType = data?.targetType as NodeType | undefined;
   const isAnimated = data?.isAnimated;
+  const edgeLabel = data?.label as string | undefined;
+  const edgeDescription = data?.description as string | undefined;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [localLabel, setLocalLabel] = useState(edgeLabel || '');
+  const [localDescription, setLocalDescription] = useState(edgeDescription || '');
+  const [isHovered, setIsHovered] = useState(false);
 
   // Validate connection
   let validity: ConnectionValidity = 'valid';
@@ -91,6 +83,27 @@ export const ValidatedEdge: React.FC<ValidatedEdgeProps> = ({
     targetPosition,
     borderRadius: 16,
   });
+
+  // Handle delete
+  const handleDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteElements({ edges: [{ id }] });
+  }, [deleteElements, id]);
+
+  // Handle save label/description
+  const handleSave = useCallback(() => {
+    updateEdgeData(id, {
+      label: localLabel.trim() || undefined,
+      description: localDescription.trim() || undefined,
+    });
+    setIsEditing(false);
+  }, [id, localLabel, localDescription, updateEdgeData]);
+
+  // Handle click on edge label
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedEdge(id);
+  }, [id, setSelectedEdge]);
 
   // Get edge color based on validity
   const getEdgeColor = () => {
@@ -190,7 +203,7 @@ export const ValidatedEdge: React.FC<ValidatedEdgeProps> = ({
         className={cn(isAnimated && 'animate-flow')}
       />
       
-      {/* Connection validity indicator with tooltip */}
+      {/* Connection validity indicator with tooltip and controls */}
       <EdgeLabelRenderer>
         <div
           style={{
@@ -198,24 +211,99 @@ export const ValidatedEdge: React.FC<ValidatedEdgeProps> = ({
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             pointerEvents: 'all',
           }}
+          className="edge-label-container"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onClick={handleClick}
         >
+          {/* Delete button - appears on hover */}
+          <button
+            onClick={handleDelete}
+            className={cn(
+              'edge-delete-btn absolute -top-6 left-1/2 -translate-x-1/2',
+              'flex items-center justify-center w-5 h-5 rounded-full',
+              'bg-destructive/90 hover:bg-destructive text-destructive-foreground',
+              'border border-destructive shadow-md',
+              'transition-all duration-200',
+              isHovered ? 'opacity-100' : 'opacity-0'
+            )}
+            title="Delete connection"
+          >
+            <X className="w-3 h-3" />
+          </button>
+
+          {/* Main indicator with tooltip */}
           <TooltipProvider delayDuration={100}>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={cn(
-                    'flex items-center justify-center w-5 h-5 rounded-full cursor-pointer',
-                    'bg-background/90 border shadow-lg',
-                    'transition-all duration-200 hover:scale-110',
-                    isRag && 'border-[hsl(var(--edge-rag))]',
-                    validity === 'valid' && !isRag && 'border-[hsl(var(--edge-valid))]',
-                    validity === 'warning' && 'border-[hsl(var(--edge-warning))]',
-                    validity === 'invalid' && 'border-[hsl(var(--edge-invalid))]',
-                  )}
+              <Popover open={isEditing} onOpenChange={setIsEditing}>
+                <PopoverTrigger asChild>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={cn(
+                        'flex items-center justify-center w-6 h-6 rounded-full cursor-pointer',
+                        'bg-background/90 border shadow-lg',
+                        'transition-all duration-200 hover:scale-110',
+                        isRag && 'border-[hsl(var(--edge-rag))]',
+                        validity === 'valid' && !isRag && 'border-[hsl(var(--edge-valid))]',
+                        validity === 'warning' && 'border-[hsl(var(--edge-warning))]',
+                        validity === 'invalid' && 'border-[hsl(var(--edge-invalid))]',
+                      )}
+                    >
+                      {getValidityIcon()}
+                    </div>
+                  </TooltipTrigger>
+                </PopoverTrigger>
+                
+                {/* Edit popover */}
+                <PopoverContent 
+                  side="top" 
+                  className="w-64 p-3 space-y-3"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {getValidityIcon()}
-                </div>
-              </TooltipTrigger>
+                  <div className="space-y-2">
+                    <Label htmlFor="edge-label" className="text-xs">
+                      Connection Name
+                    </Label>
+                    <Input
+                      id="edge-label"
+                      value={localLabel}
+                      onChange={(e) => setLocalLabel(e.target.value)}
+                      placeholder="e.g., Main Flow"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edge-description" className="text-xs">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="edge-description"
+                      value={localDescription}
+                      onChange={(e) => setLocalDescription(e.target.value)}
+                      placeholder="Describe this connection..."
+                      className="min-h-[60px] text-sm resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 h-7 text-xs"
+                      onClick={() => setIsEditing(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 h-7 text-xs"
+                      onClick={handleSave}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
               <TooltipContent 
                 side="top" 
                 className="max-w-[250px] p-3 space-y-1"
@@ -231,9 +319,20 @@ export const ValidatedEdge: React.FC<ValidatedEdgeProps> = ({
                     {tooltipContent.detail}
                   </p>
                 )}
+                <p className="text-[10px] text-muted-foreground/70 pt-1 border-t border-border/50 mt-2">
+                  Click to edit • Hover for delete
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          {/* Custom label display (below indicator) */}
+          {edgeLabel && (
+            <div className="edge-custom-label mt-1 flex items-center gap-1">
+              <Pencil className="w-2.5 h-2.5 opacity-50" />
+              <span>{edgeLabel}</span>
+            </div>
+          )}
         </div>
       </EdgeLabelRenderer>
     </>
