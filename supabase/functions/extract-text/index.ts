@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import * as pdfjs from "https://esm.sh/pdfjs-dist@4.0.379/build/pdf.min.mjs";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,64 @@ interface ExtractionResult {
     characterCount: number;
     wordCount: number;
     extractedAt: string;
+    extractionMethod?: string;
   };
+}
+
+// Extract text from PDF using PDF.js
+async function extractPdfText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pages: number }> {
+  try {
+    console.log(`Starting PDF extraction, size: ${arrayBuffer.byteLength} bytes`);
+    const startTime = Date.now();
+    
+    // Load the PDF document
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
+    const pdf = await loadingTask.promise;
+    
+    const numPages = pdf.numPages;
+    console.log(`PDF loaded: ${numPages} pages`);
+    
+    const textParts: string[] = [];
+    
+    // Extract text from each page (limit to first 50 pages for performance)
+    const maxPages = Math.min(numPages, 50);
+    
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      try {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        // Extract text items and join them
+        const pageText = textContent.items
+          .map((item: any) => item.str || '')
+          .join(' ');
+        
+        if (pageText.trim()) {
+          textParts.push(`--- Page ${pageNum} ---\n${pageText.trim()}`);
+        }
+      } catch (pageError) {
+        console.error(`Error extracting page ${pageNum}:`, pageError);
+        textParts.push(`--- Page ${pageNum} ---\n[Error extracting this page]`);
+      }
+    }
+    
+    if (numPages > maxPages) {
+      textParts.push(`\n[Note: Only first ${maxPages} of ${numPages} pages were extracted]`);
+    }
+    
+    const extractedText = textParts.join('\n\n');
+    const elapsed = Date.now() - startTime;
+    
+    console.log(`PDF extraction complete: ${extractedText.length} chars, ${numPages} pages, ${elapsed}ms`);
+    
+    return {
+      text: extractedText || '[No text content found in PDF - may be a scanned/image PDF]',
+      pages: numPages
+    };
+  } catch (error) {
+    console.error('PDF extraction error:', error);
+    throw new Error(`PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 // Extract text from DOCX (which is a ZIP containing XML)
@@ -116,6 +174,7 @@ serve(async (req) => {
 
     let extractedText = '';
     let pages: number | undefined;
+    let extractionMethod = 'direct';
     const contentType = response.headers.get('content-type') || '';
 
     // Determine file type from extension or content-type
@@ -126,25 +185,26 @@ serve(async (req) => {
     const isMarkdown = extension === 'md' || extension === 'markdown';
 
     if (isPdf) {
-      // For PDFs, provide guidance about extraction
-      // Real PDF extraction would require a library
-      extractedText = `[PDF Document: ${fileName}]\n\n`;
-      extractedText += `This is a PDF file. For full text extraction, the document can be processed with:\n`;
-      extractedText += `- AI vision models for OCR\n`;
-      extractedText += `- PDF parsing libraries\n\n`;
-      extractedText += `File URL: ${url}\n\n`;
-      extractedText += `Note: For production use, consider integrating with a PDF parsing service or using AI vision to extract content from PDF pages.`;
-      pages = undefined; // Would need actual parsing to get page count
+      // Real PDF extraction using PDF.js
+      console.log('Using PDF.js for extraction');
+      extractionMethod = 'pdfjs';
+      const arrayBuffer = await response.arrayBuffer();
+      const pdfResult = await extractPdfText(arrayBuffer);
+      extractedText = pdfResult.text;
+      pages = pdfResult.pages;
     } else if (isDocx) {
       // DOCX extraction
+      extractionMethod = 'docx-xml';
       const arrayBuffer = await response.arrayBuffer();
       extractedText = await extractDocxText(arrayBuffer);
     } else if (isHtml) {
       // HTML extraction
+      extractionMethod = 'html-strip';
       const html = await response.text();
       extractedText = extractHtmlText(html);
     } else {
       // Plain text, markdown, or other text files
+      extractionMethod = 'text';
       extractedText = await response.text();
       
       // Clean up if it looks like it might have some markup
@@ -159,12 +219,12 @@ serve(async (req) => {
 
     // Truncate if too long (keep first 50000 chars for context)
     const maxChars = 50000;
-    const wasTrauncated = extractedText.length > maxChars;
-    if (wasTrauncated) {
+    const wasTruncated = extractedText.length > maxChars;
+    if (wasTruncated) {
       extractedText = extractedText.substring(0, maxChars) + '\n\n[Content truncated... Original document has more content]';
     }
 
-    console.log(`Extracted ${characterCount} characters, ${wordCount} words from ${fileName}`);
+    console.log(`Extracted ${characterCount} characters, ${wordCount} words from ${fileName} using ${extractionMethod}`);
 
     const result: ExtractionResult = {
       text: extractedText,
@@ -175,6 +235,7 @@ serve(async (req) => {
         characterCount,
         wordCount,
         extractedAt: new Date().toISOString(),
+        extractionMethod,
       },
     };
 

@@ -189,6 +189,7 @@ export interface FileUploadData {
   fileSize?: number;
   fileUrl?: string;
   extractedText?: string;
+  extractionWarning?: string;
   metadata?: {
     fileName: string;
     fileType: string;
@@ -196,6 +197,7 @@ export interface FileUploadData {
     characterCount: number;
     wordCount: number;
     extractedAt: string;
+    extractionMethod?: string;
   };
 }
 
