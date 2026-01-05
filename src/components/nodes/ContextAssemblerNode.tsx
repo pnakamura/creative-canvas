@@ -46,6 +46,11 @@ export const ContextAssemblerNode: React.FC<NodeProps> = (props) => {
       }
 
       if (retrievedDocuments.length === 0) {
+        // Check if there's a connected retriever that returned 0 docs
+        const connectedRetriever = freshInputs.find((n) => n.data.type === 'retriever');
+        if (connectedRetriever && connectedRetriever.data.retrievalMetadata) {
+          throw new Error('O Retriever retornou 0 documentos. Diminua o Threshold (recomendado 0.3) e rode o Retriever novamente.');
+        }
         throw new Error('Nenhum documento encontrado. Conecte um RetrieverNode com documentos recuperados.');
       }
 

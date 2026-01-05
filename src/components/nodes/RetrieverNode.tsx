@@ -79,7 +79,11 @@ export const RetrieverNode: React.FC<NodeProps> = (props) => {
         isComplete: true,
       });
 
-      toast.success(`${result.documents.length} documentos recuperados`);
+      if (result.documents.length === 0) {
+        toast.warning('0 documentos recuperados. Tente diminuir o Threshold (recomendado 0.3) ou aumentar TopK.');
+      } else {
+        toast.success(`${result.documents.length} documentos recuperados`);
+      }
     } catch (error) {
       console.error('Retrieval error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro na recuperação';

@@ -614,7 +614,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         case 'embedding':
           return { embeddingSettings: { model: 'text-embedding-3-small' as const, dimensions: 1536, batchSize: 100, storeInDb: true } };
         case 'retriever':
-          return { retrieverSettings: { topK: 5, threshold: 0.7 } };
+          return { retrieverSettings: { topK: 5, threshold: 0.3 } };
         case 'contextAssembler':
           return { contextAssemblerSettings: { maxTokens: 4000, includeMetadata: true, separator: '\n\n---\n\n', format: 'structured' as const } };
         case 'vectorStore':

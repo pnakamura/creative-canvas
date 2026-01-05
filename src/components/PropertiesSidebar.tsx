@@ -174,7 +174,7 @@ export const PropertiesSidebar: React.FC = () => {
   const handleRetrieverSettingsChange = (key: keyof RetrieverSettings, value: any) => {
     const currentSettings: RetrieverSettings = data.retrieverSettings || {
       topK: 5,
-      threshold: 0.7,
+      threshold: 0.3,
     };
     
     updateNodeData(selectedNodeId!, {
