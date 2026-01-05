@@ -100,10 +100,13 @@ export const RetrieverNode: React.FC<NodeProps> = (props) => {
   const retrievedDocs = nodeData.retrievedDocuments as Array<{ content: string; similarity: number; document_name?: string }> | undefined;
   const retrievedCount = retrievedDocs?.length || 0;
 
+  // Merge onRun into data for BaseNode
+  const dataWithRun = { ...nodeData, onRun: handleRun };
+
   return (
     <BaseNode
       {...props}
-      data={nodeData}
+      data={dataWithRun}
       icon={Search}
       iconColor="text-emerald-400"
       fixedDescription="Busca documentos similares usando embeddings vetoriais"

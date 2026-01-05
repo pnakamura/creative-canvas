@@ -105,10 +105,13 @@ export const ContextAssemblerNode: React.FC<NodeProps> = (props) => {
 
   const metadata = nodeData.contextMetadata as { documentsIncluded: number; totalDocuments: number; estimatedTokens: number; format: string } | undefined;
 
+  // Merge onRun into data for BaseNode
+  const dataWithRun = { ...nodeData, onRun: handleRun };
+
   return (
     <BaseNode
       {...props}
-      data={nodeData}
+      data={dataWithRun}
       icon={Layers}
       iconColor="text-sky-400"
       fixedDescription="Monta contexto dos documentos recuperados para o LLM"
