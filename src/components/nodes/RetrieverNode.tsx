@@ -14,7 +14,7 @@ export const RetrieverNode: React.FC<NodeProps> = (props) => {
 
   const settings: RetrieverSettings = nodeData.retrieverSettings || {
     topK: 5,
-    threshold: 0.7,
+    threshold: 0.3,
     knowledgeBaseId: undefined,
   };
 
