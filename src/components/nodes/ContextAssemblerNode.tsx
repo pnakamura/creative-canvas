@@ -99,8 +99,9 @@ export const ContextAssemblerNode: React.FC<NodeProps> = (props) => {
   handleRunRef.current = handleRun;
 
   React.useEffect(() => {
+    const { updateNodeData } = useFlowStore.getState();
     updateNodeData(props.id, { onRun: () => handleRunRef.current() });
-  }, [props.id, updateNodeData]);
+  }, [props.id]);
 
   const metadata = nodeData.contextMetadata as { documentsIncluded: number; totalDocuments: number; estimatedTokens: number; format: string } | undefined;
 

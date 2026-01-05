@@ -93,8 +93,9 @@ export const RetrieverNode: React.FC<NodeProps> = (props) => {
   handleRunRef.current = handleRun;
 
   React.useEffect(() => {
+    const { updateNodeData } = useFlowStore.getState();
     updateNodeData(props.id, { onRun: () => handleRunRef.current() });
-  }, [props.id, updateNodeData]);
+  }, [props.id]);
 
   const retrievedDocs = nodeData.retrievedDocuments as Array<{ content: string; similarity: number; document_name?: string }> | undefined;
   const retrievedCount = retrievedDocs?.length || 0;
