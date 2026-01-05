@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { NodeProps } from '@xyflow/react';
-import { Sparkles, Wand2, FileText, Image, Brain, Lightbulb, Pencil, MessageSquare, Zap } from 'lucide-react';
+import { Sparkles, Wand2, FileText, Image, Brain, Lightbulb, Pencil, MessageSquare, Zap, Database } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { Button } from '@/components/ui/button';
 import { useFlowStore, NodeData, AssistantMode } from '@/store/flowStore';
@@ -26,9 +26,32 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
   const currentMode = assistantSettings?.mode || 'expand';
   const ModeIcon = modeConfig[currentMode].icon;
 
+  // Get connected nodes for display
+  const { inputs } = getConnectedNodes(props.id);
+  const hasTextInput = inputs.some((n) => (n.data as NodeData).type === 'text');
+  const hasReferenceInput = inputs.some((n) => (n.data as NodeData).type === 'reference');
+  const hasContextInput = inputs.some((n) => (n.data as NodeData).type === 'contextAssembler');
+  const hasRetrieverInput = inputs.some((n) => (n.data as NodeData).type === 'retriever');
+  
+  const referenceInput = inputs.find((n) => (n.data as NodeData).type === 'reference');
+  const contextInput = inputs.find((n) => (n.data as NodeData).type === 'contextAssembler');
+  const retrieverInput = inputs.find((n) => (n.data as NodeData).type === 'retriever');
+
+  // Calculate RAG context stats
+  const ragStats = useMemo(() => {
+    if (hasContextInput && contextInput?.data.contextMetadata) {
+      const meta = contextInput.data.contextMetadata as { documentsIncluded: number; estimatedTokens: number };
+      return { docs: meta.documentsIncluded, tokens: meta.estimatedTokens };
+    }
+    if (hasRetrieverInput && retrieverInput?.data.retrievedDocuments) {
+      const docs = retrieverInput.data.retrievedDocuments as Array<{ content: string }>;
+      const tokens = docs.reduce((sum, d) => sum + Math.ceil(d.content.length / 4), 0);
+      return { docs: docs.length, tokens };
+    }
+    return null;
+  }, [hasContextInput, hasRetrieverInput, contextInput, retrieverInput]);
+
   const handleProcess = useCallback(async () => {
-    const { inputs } = getConnectedNodes(props.id);
-    
     const textInput = inputs.find((n) => (n.data as NodeData).type === 'text');
     const referenceInput = inputs.find((n) => (n.data as NodeData).type === 'reference');
     const contextAssemblerInput = inputs.find((n) => (n.data as NodeData).type === 'contextAssembler');
@@ -41,10 +64,10 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
                           retrieverInput?.data.retrievedDocuments;
     
     if (!hasValidInput) {
-      updateNodeData(props.id, { error: 'No input connected' });
+      updateNodeData(props.id, { error: 'Nenhuma entrada conectada' });
       toast({
-        title: "No input",
-        description: "Connect a Text, Reference, Context Assembler, or Retriever node first",
+        title: "Sem entrada",
+        description: "Conecte um nó de Texto, Referência, Context Assembler, ou Retriever",
         variant: "destructive",
       });
       return;
@@ -120,7 +143,7 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
       const result = data?.result;
       
       if (!result) {
-        throw new Error('No response from AI');
+        throw new Error('Sem resposta da IA');
       }
       
       updateNodeData(props.id, {
@@ -128,43 +151,37 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
         negativePrompt: result.negativePrompt,
         isProcessing: false,
         isComplete: true,
+        usedRagContext: !!ragContext,
       });
 
       toast({
-        title: `${modeConfig[currentMode].label} complete`,
-        description: hasImageContext 
-          ? "Your prompt has been enhanced with image analysis" 
-          : "Your creative prompt has been processed",
+        title: `${modeConfig[currentMode].label} completo`,
+        description: ragContext 
+          ? `Processado com ${ragStats?.docs || 0} documentos do RAG` 
+          : hasImageContext 
+            ? "Prompt aprimorado com análise de imagem" 
+            : "Prompt criativo processado",
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to process';
+      const errorMessage = err instanceof Error ? err.message : 'Falha ao processar';
       updateNodeData(props.id, {
         error: errorMessage,
         isProcessing: false,
       });
       toast({
-        title: "Error",
+        title: "Erro",
         description: errorMessage,
         variant: "destructive",
       });
     }
-  }, [props.id, getConnectedNodes, updateNodeData, toast, assistantSettings, currentMode]);
-
-  const { inputs } = getConnectedNodes(props.id);
-  const hasTextInput = inputs.some((n) => (n.data as NodeData).type === 'text');
-  const hasReferenceInput = inputs.some((n) => (n.data as NodeData).type === 'reference');
-  const hasContextInput = inputs.some((n) => (n.data as NodeData).type === 'contextAssembler');
-  const hasRetrieverInput = inputs.some((n) => (n.data as NodeData).type === 'retriever');
-  const referenceInput = inputs.find((n) => (n.data as NodeData).type === 'reference');
-  const contextInput = inputs.find((n) => (n.data as NodeData).type === 'contextAssembler');
-  const retrieverInput = inputs.find((n) => (n.data as NodeData).type === 'retriever');
+  }, [props.id, inputs, updateNodeData, toast, assistantSettings, currentMode, ragStats]);
 
   const creativityLabel = useMemo(() => {
     const creativity = assistantSettings?.creativity || 70;
-    if (creativity < 30) return 'Conservative';
-    if (creativity < 60) return 'Balanced';
-    if (creativity < 80) return 'Creative';
-    return 'Wild';
+    if (creativity < 30) return 'Conservador';
+    if (creativity < 60) return 'Balanceado';
+    if (creativity < 80) return 'Criativo';
+    return 'Ousado';
   }, [assistantSettings?.creativity]);
 
   return (
@@ -172,7 +189,7 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
       {...props}
       icon={Sparkles}
       iconColor="text-secondary"
-      fixedDescription="AI-powered prompt processor"
+      fixedDescription="Processador de prompts com IA"
       nodeCategory="processor"
       inputs={[
         { id: 'text-in', type: 'text', label: 'Text' },
@@ -196,12 +213,27 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
           </Badge>
         </div>
 
+        {/* RAG Context Badge - Prominent when available */}
+        {ragStats && (
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-cyan-500/15 border border-cyan-500/40">
+            <Database className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-cyan-400">
+                Contexto RAG Disponível
+              </p>
+              <p className="text-[10px] text-cyan-400/80">
+                {ragStats.docs} documentos • ~{ragStats.tokens} tokens
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Connected Inputs */}
         {(hasTextInput || hasReferenceInput || hasContextInput || hasRetrieverInput) && (
           <div className="flex flex-wrap gap-1">
             {hasTextInput && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-primary/20 text-primary">
-                <FileText className="w-3 h-3" /> Text
+                <FileText className="w-3 h-3" /> Texto
               </span>
             )}
             {hasReferenceInput && referenceInput && (
@@ -211,27 +243,17 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
                 ) : (
                   <FileText className="w-3 h-3" />
                 )}
-                {(referenceInput.data as NodeData).assetType === 'image' ? 'Image' : 'Doc'}
+                {(referenceInput.data as NodeData).assetType === 'image' ? 'Imagem' : 'Doc'}
               </span>
             )}
-            {hasContextInput && contextInput && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-cyan-500/20 text-cyan-400">
-                <Brain className="w-3 h-3" /> RAG Context
-                {(contextInput.data as NodeData).contextMetadata?.documentsIncluded && (
-                  <span className="text-[9px] opacity-70">
-                    ({(contextInput.data as NodeData).contextMetadata?.documentsIncluded} docs)
-                  </span>
-                )}
+            {hasContextInput && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-sky-500/20 text-sky-400">
+                <Brain className="w-3 h-3" /> Context Assembler
               </span>
             )}
-            {hasRetrieverInput && retrieverInput && !hasContextInput && (
+            {hasRetrieverInput && !hasContextInput && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-400">
                 <Brain className="w-3 h-3" /> Retriever
-                {(retrieverInput.data as NodeData).retrievedDocuments && (
-                  <span className="text-[9px] opacity-70">
-                    ({((retrieverInput.data as NodeData).retrievedDocuments as Array<unknown>)?.length || 0} docs)
-                  </span>
-                )}
               </span>
             )}
           </div>
@@ -250,18 +272,26 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
           variant="outline"
         >
           <ModeIcon className={cn('w-4 h-4', isProcessing && 'animate-spin')} />
-          {isProcessing ? 'Processing...' : `${modeConfig[currentMode].label} Idea`}
+          {isProcessing ? 'Processando...' : `${modeConfig[currentMode].label} Idea`}
         </Button>
 
         {/* Output Display */}
         {prompt && (
           <div className="p-3 rounded-lg bg-background/50 border border-border/50 space-y-2">
-            <p className="text-xs text-muted-foreground mb-1">Enhanced Prompt:</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">Prompt Aprimorado:</p>
+              {nodeData.usedRagContext && (
+                <Badge variant="outline" className="text-[9px] bg-cyan-500/20 text-cyan-400 gap-1">
+                  <Database className="w-2.5 h-2.5" />
+                  RAG
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-foreground/80 line-clamp-4">{prompt}</p>
             
             {negativePrompt && (
               <>
-                <p className="text-xs text-muted-foreground mt-2">Negative Prompt:</p>
+                <p className="text-xs text-muted-foreground mt-2">Prompt Negativo:</p>
                 <p className="text-xs text-destructive/70 line-clamp-2">{negativePrompt}</p>
               </>
             )}
