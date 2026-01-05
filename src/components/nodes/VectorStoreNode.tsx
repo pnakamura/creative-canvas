@@ -148,12 +148,18 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
       toast.success('Knowledge base deletada');
       setSelectedKb(null);
       setDocuments([]);
+      // Clear nodeData to prevent orphan references
+      updateNodeData(props.id, { 
+        selectedKnowledgeBaseId: undefined,
+        chunkCount: 0,
+        documentChunks: []
+      });
       fetchKnowledgeBases();
     } catch (error) {
       console.error('Error deleting knowledge base:', error);
       toast.error('Falha ao deletar knowledge base');
     }
-  }, [user, fetchKnowledgeBases]);
+  }, [user, fetchKnowledgeBases, props.id, updateNodeData]);
 
   // Delete all chunks from a knowledge base (but keep the KB)
   const deleteAllChunks = useCallback(async (kbId: string) => {
@@ -232,6 +238,24 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
   useEffect(() => {
     fetchKnowledgeBases();
   }, [fetchKnowledgeBases]);
+
+  // Validate that saved KB still exists - clear if orphaned
+  useEffect(() => {
+    const savedKbId = nodeData.selectedKnowledgeBaseId as string | undefined;
+    if (savedKbId && knowledgeBases.length > 0) {
+      const kbExists = knowledgeBases.some(kb => kb.id === savedKbId);
+      if (!kbExists) {
+        // KB was deleted externally - clear the reference
+        console.log('Clearing orphaned KB reference:', savedKbId);
+        setSelectedKb(null);
+        updateNodeData(props.id, { 
+          selectedKnowledgeBaseId: undefined,
+          chunkCount: 0,
+          documentChunks: []
+        });
+      }
+    }
+  }, [knowledgeBases, nodeData.selectedKnowledgeBaseId, props.id, updateNodeData]);
 
   // Load documents when KB is selected
   useEffect(() => {
