@@ -193,9 +193,13 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
     return 'Ousado';
   }, [assistantSettings?.creativity]);
 
+  // Merge onRun into data for BaseNode
+  const dataWithRun = { ...nodeData, onRun: handleProcess };
+
   return (
     <BaseNode
       {...props}
+      data={dataWithRun}
       icon={Sparkles}
       iconColor="text-secondary"
       fixedDescription="Processador de prompts com IA"
