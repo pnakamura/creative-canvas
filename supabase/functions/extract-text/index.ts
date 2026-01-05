@@ -1,6 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-// @ts-ignore - pdfjs-serverless is a valid Deno import
-import { getDocument } from "https://esm.sh/pdfjs-serverless@0.4.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,57 +28,94 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: st
   ]);
 }
 
-// Extract text from PDF using pdfjs-serverless (no web worker required)
+// Extract text from PDF using basic binary parsing (fallback approach)
 async function extractPdfText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pages: number }> {
   try {
     console.log(`Starting PDF extraction, size: ${arrayBuffer.byteLength} bytes`);
     const startTime = Date.now();
     
-    // Load the PDF using pdfjs-serverless with proper options
-    const doc = await withTimeout(
-      getDocument({
-        data: new Uint8Array(arrayBuffer),
-        useSystemFonts: true,
-      }).promise,
-      30000,
-      'PDF loading timed out - file may be too large or corrupted'
-    ) as any;
+    // Use Uint8Array for binary processing
+    const bytes = new Uint8Array(arrayBuffer);
+    const decoder = new TextDecoder('latin1');
+    const content = decoder.decode(bytes);
     
-    const numPages = doc.numPages;
-    console.log(`PDF loaded: ${numPages} pages`);
+    // Count pages from PDF structure
+    const pageMatches = content.match(/\/Type\s*\/Page[^s]/g) || [];
+    const numPages = Math.max(pageMatches.length, 1);
     
+    // Extract text streams from PDF
     const textParts: string[] = [];
-    const maxPages = Math.min(numPages, 50);
     
-    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
-      try {
-        const page = await doc.getPage(pageNum);
-        const textContent = await page.getTextContent();
+    // Look for text between stream markers and decode
+    const streamRegex = /stream\s*([\s\S]*?)\s*endstream/g;
+    let match;
+    
+    while ((match = streamRegex.exec(content)) !== null) {
+      const streamContent = match[1];
+      
+      // Look for text operators (Tj, TJ, ')
+      const textOpRegex = /\(([^)]*)\)\s*Tj|\[([^\]]*)\]\s*TJ|'([^']*)'/g;
+      let textMatch;
+      
+      while ((textMatch = textOpRegex.exec(streamContent)) !== null) {
+        const text = textMatch[1] || textMatch[2] || textMatch[3] || '';
+        // Clean up escape sequences
+        const cleaned = text
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t')
+          .replace(/\\\(/g, '(')
+          .replace(/\\\)/g, ')')
+          .replace(/\\\\/g, '\\')
+          .replace(/\\(\d{3})/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
         
-        const pageText = textContent.items
-          .map((item: any) => item.str || '')
-          .join(' ');
-        
-        if (pageText.trim()) {
-          textParts.push(`--- Page ${pageNum} ---\n${pageText.trim()}`);
+        if (cleaned.trim()) {
+          textParts.push(cleaned);
         }
-      } catch (pageError) {
-        console.error(`Error extracting page ${pageNum}:`, pageError);
-        textParts.push(`--- Page ${pageNum} ---\n[Error extracting this page]`);
       }
     }
     
-    if (numPages > maxPages) {
-      textParts.push(`\n[Note: Only first ${maxPages} of ${numPages} pages were extracted]`);
+    // Also try to extract any readable ASCII text sequences
+    const asciiRegex = /[\x20-\x7E]{10,}/g;
+    const asciiMatches = content.match(asciiRegex) || [];
+    
+    // Filter out PDF structural elements
+    const filteredAscii = asciiMatches.filter(text => 
+      !text.includes('/Type') &&
+      !text.includes('/Font') &&
+      !text.includes('/Page') &&
+      !text.includes('stream') &&
+      !text.includes('endobj') &&
+      !text.includes('/Length') &&
+      !text.includes('/Filter')
+    );
+    
+    // Combine extracted text
+    let extractedText = textParts.join(' ');
+    
+    // If we didn't get much from stream parsing, use ASCII extraction
+    if (extractedText.length < 100 && filteredAscii.length > 0) {
+      extractedText = filteredAscii.join(' ');
     }
     
-    const extractedText = textParts.join('\n\n');
-    const elapsed = Date.now() - startTime;
+    // Clean up the text
+    extractedText = extractedText
+      .replace(/\s+/g, ' ')
+      .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+      .trim();
     
+    const elapsed = Date.now() - startTime;
     console.log(`PDF extraction complete: ${extractedText.length} chars, ${numPages} pages, ${elapsed}ms`);
     
+    if (!extractedText || extractedText.length < 50) {
+      return {
+        text: '[PDF text extraction limited - document may use embedded fonts, images, or complex encoding. Consider using a text-based format for better results.]',
+        pages: numPages
+      };
+    }
+    
     return {
-      text: extractedText || '[No text content found in PDF - may be a scanned/image PDF]',
+      text: extractedText,
       pages: numPages
     };
   } catch (error) {
