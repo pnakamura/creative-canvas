@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import { Database, Loader2, FileText, Trash2, RefreshCw, Plus } from 'lucide-react';
+import { Database, Loader2, FileText, Trash2, RefreshCw, Plus, Binary, Zap, CheckCircle2 } from 'lucide-react';
 import { useFlowStore, NodeData } from '@/store/flowStore';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,7 +36,7 @@ interface DocumentChunk {
 
 export const VectorStoreNode: React.FC<NodeProps> = (props) => {
   const nodeData = props.data as NodeData;
-  const { updateNodeData } = useFlowStore();
+  const { updateNodeData, getConnectedNodes } = useFlowStore();
   const { user } = useAuth();
   
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
@@ -48,6 +48,11 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newKbName, setNewKbName] = useState('');
   const [newKbDescription, setNewKbDescription] = useState('');
+
+  // Check if connected to EmbeddingNode
+  const { inputs } = getConnectedNodes(props.id);
+  const embeddingNode = inputs.find(n => n.data.type === 'embedding');
+  const isEmbeddingTarget = !!embeddingNode;
 
   // Fetch knowledge bases
   const fetchKnowledgeBases = useCallback(async () => {
@@ -68,7 +73,7 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
       });
     } catch (error) {
       console.error('Error fetching knowledge bases:', error);
-      toast.error('Failed to fetch knowledge bases');
+      toast.error('Falha ao buscar knowledge bases');
     } finally {
       setIsLoading(false);
     }
@@ -91,6 +96,23 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
       if (error) throw error;
       setDocuments(data || []);
       
+      // Update knowledge base counts
+      const { count: chunkCount } = await supabase
+        .from('document_chunks')
+        .select('*', { count: 'exact', head: true })
+        .eq('knowledge_base_id', kbId);
+
+      const uniqueDocs = new Set(data?.map(d => d.document_id) || []);
+      
+      await supabase
+        .from('knowledge_bases')
+        .update({ 
+          chunk_count: chunkCount || 0,
+          document_count: uniqueDocs.size,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', kbId);
+      
       updateNodeData(props.id, {
         selectedKnowledgeBaseId: kbId,
         documentChunks: data || [],
@@ -98,7 +120,7 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
       });
     } catch (error) {
       console.error('Error fetching documents:', error);
-      toast.error('Failed to fetch documents');
+      toast.error('Falha ao buscar documentos');
     } finally {
       setIsLoadingDocs(false);
     }
@@ -123,13 +145,13 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
 
       if (error) throw error;
       
-      toast.success('Knowledge base deleted');
+      toast.success('Knowledge base deletada');
       setSelectedKb(null);
       setDocuments([]);
       fetchKnowledgeBases();
     } catch (error) {
       console.error('Error deleting knowledge base:', error);
-      toast.error('Failed to delete knowledge base');
+      toast.error('Falha ao deletar knowledge base');
     }
   }, [user, fetchKnowledgeBases]);
 
@@ -153,7 +175,7 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
 
       if (error) throw error;
       
-      toast.success('Knowledge base created');
+      toast.success('Knowledge base criada');
       setNewKbName('');
       setNewKbDescription('');
       setIsDialogOpen(false);
@@ -162,14 +184,15 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
       // Auto-select the new KB
       if (data) {
         setSelectedKb(data.id);
+        updateNodeData(props.id, { selectedKnowledgeBaseId: data.id });
       }
     } catch (error) {
       console.error('Error creating knowledge base:', error);
-      toast.error('Failed to create knowledge base');
+      toast.error('Falha ao criar knowledge base');
     } finally {
       setIsCreating(false);
     }
-  }, [user, newKbName, newKbDescription, fetchKnowledgeBases]);
+  }, [user, newKbName, newKbDescription, fetchKnowledgeBases, props.id, updateNodeData]);
 
   // Initialize
   useEffect(() => {
@@ -184,9 +207,13 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
   }, [selectedKb, fetchDocuments]);
 
   const handleKbSelect = (kbId: string) => {
-    setSelectedKb(kbId === selectedKb ? null : kbId);
-    if (kbId !== selectedKb) {
+    const newSelection = kbId === selectedKb ? null : kbId;
+    setSelectedKb(newSelection);
+    if (newSelection) {
+      updateNodeData(props.id, { selectedKnowledgeBaseId: newSelection });
+    } else {
       setDocuments([]);
+      updateNodeData(props.id, { selectedKnowledgeBaseId: undefined });
     }
   };
 
@@ -208,11 +235,42 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
       icon={Database}
       iconColor="text-teal-400"
       nodeCategory="source"
-      fixedDescription="Manage knowledge bases and view stored documents"
-      inputs={[]}
+      fixedDescription="Gerenciar knowledge bases e documentos armazenados"
+      inputs={[{ id: 'embeddings-in', type: 'context', label: 'Embeddings' }]}
       outputs={[{ id: 'context', type: 'context', label: 'Knowledge Base ID' }]}
     >
       <div className="space-y-3">
+        {/* Embedding Target Banner */}
+        {isEmbeddingTarget && (
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-teal-500/15 border border-teal-500/40 animate-fade-in">
+            <Binary className="w-5 h-5 text-teal-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-teal-400">
+                Destino de Embeddings
+              </p>
+              <p className="text-[10px] text-teal-400/80">
+                {selectedKb ? 'KB selecionada - pronto para receber' : 'Selecione uma KB abaixo'}
+              </p>
+            </div>
+            {selectedKb && <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />}
+          </div>
+        )}
+
+        {/* Ready for Retrieval Banner */}
+        {selectedKb && documents.length > 0 && !isEmbeddingTarget && (
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 animate-fade-in">
+            <Zap className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-emerald-400">
+                Pronto para Retrieval
+              </p>
+              <p className="text-[10px] text-emerald-400/80">
+                {documents.length} chunks disponíveis
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Header with Create and Refresh */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
@@ -232,24 +290,24 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[400px]" onClick={(e) => e.stopPropagation()}>
                 <DialogHeader>
-                  <DialogTitle>Create Knowledge Base</DialogTitle>
+                  <DialogTitle>Criar Knowledge Base</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="kb-name">Name</Label>
+                    <Label htmlFor="kb-name">Nome</Label>
                     <Input
                       id="kb-name"
-                      placeholder="My Knowledge Base"
+                      placeholder="Minha Knowledge Base"
                       value={newKbName}
                       onChange={(e) => setNewKbName(e.target.value)}
                       className="nodrag"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="kb-description">Description (optional)</Label>
+                    <Label htmlFor="kb-description">Descrição (opcional)</Label>
                     <Textarea
                       id="kb-description"
-                      placeholder="A collection of documents about..."
+                      placeholder="Uma coleção de documentos sobre..."
                       value={newKbDescription}
                       onChange={(e) => setNewKbDescription(e.target.value)}
                       className="nodrag resize-none"
@@ -263,7 +321,7 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
                     onClick={() => setIsDialogOpen(false)}
                     disabled={isCreating}
                   >
-                    Cancel
+                    Cancelar
                   </Button>
                   <Button
                     onClick={createKnowledgeBase}
@@ -272,10 +330,10 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
                     {isCreating ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating...
+                        Criando...
                       </>
                     ) : (
-                      'Create'
+                      'Criar'
                     )}
                   </Button>
                 </DialogFooter>
@@ -287,6 +345,7 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
               onClick={(e) => {
                 e.stopPropagation();
                 fetchKnowledgeBases();
+                if (selectedKb) fetchDocuments(selectedKb);
               }}
               disabled={isLoading}
               className="nodrag h-6 px-2"
@@ -305,8 +364,8 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
           ) : knowledgeBases.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-4 text-center">
               <Database className="w-6 h-6 text-muted-foreground/50 mb-2" />
-              <span className="text-xs text-muted-foreground">No knowledge bases yet</span>
-              <span className="text-[10px] text-muted-foreground/70">Use Embedding node to create one</span>
+              <span className="text-xs text-muted-foreground">Nenhuma knowledge base</span>
+              <span className="text-[10px] text-muted-foreground/70">Clique em + para criar uma</span>
             </div>
           ) : (
             <div className="p-2 space-y-1">
@@ -356,14 +415,14 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
         {selectedKb && selectedKbData && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-foreground/80">Documents</span>
+              <span className="text-xs font-medium text-foreground/80">Documentos</span>
               {isLoadingDocs && <Loader2 className="w-3 h-3 animate-spin" />}
             </div>
             
             <ScrollArea className="h-[100px] rounded-md border border-border/50 bg-background/30">
               {Object.keys(groupedDocuments).length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <span className="text-xs text-muted-foreground">No documents</span>
+                  <span className="text-xs text-muted-foreground">Nenhum documento</span>
                 </div>
               ) : (
                 <div className="p-2 space-y-2">
@@ -403,7 +462,7 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
         {/* Output KB ID */}
         {selectedKb && (
           <div className="p-2 rounded-md bg-teal-500/10 border border-teal-500/30">
-            <span className="text-[10px] text-teal-400">Selected KB ID:</span>
+            <span className="text-[10px] text-teal-400">KB ID Selecionado:</span>
             <span className="text-[9px] text-muted-foreground block truncate">{selectedKb}</span>
           </div>
         )}

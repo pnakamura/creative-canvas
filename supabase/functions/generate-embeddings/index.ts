@@ -49,6 +49,7 @@ serve(async (req) => {
     }
 
     console.log(`Generating embeddings for ${chunks.length} chunks using ${model}`);
+    console.log(`Settings: storeInDb=${storeInDb}, userId=${userId}, kbId=${knowledgeBaseId}, docName=${documentName}`);
 
     // Process in batches
     const allEmbeddings: number[][] = [];
@@ -56,10 +57,6 @@ serve(async (req) => {
     for (let i = 0; i < chunks.length; i += batchSize) {
       const batch = chunks.slice(i, i + batchSize);
       console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(chunks.length / batchSize)}`);
-      
-      // Use Lovable AI Gateway for embeddings
-      // Note: The gateway supports embedding models through the completions API
-      // For actual embeddings, we'll simulate with a hash-based approach or use available models
       
       const embeddings = await generateEmbeddingsForBatch(batch, LOVABLE_API_KEY, dimensions);
       allEmbeddings.push(...embeddings);
@@ -74,6 +71,8 @@ serve(async (req) => {
 
       const docId = documentId || crypto.randomUUID();
       
+      console.log(`Storing ${chunks.length} chunks in database for user ${userId}, kb ${knowledgeBaseId}, doc ${documentName}`);
+      
       const chunksToInsert = chunks.map((content, index) => ({
         content,
         chunk_index: index,
@@ -83,7 +82,7 @@ serve(async (req) => {
         user_id: userId,
         knowledge_base_id: knowledgeBaseId || null,
         token_count: Math.ceil(content.length / 4),
-        metadata: { source: 'chunker_node' },
+        metadata: { source: 'embedding_node', model },
       }));
 
       const { error: insertError } = await supabase
@@ -92,10 +91,39 @@ serve(async (req) => {
 
       if (insertError) {
         console.error('Error storing embeddings:', insertError);
+        throw new Error(`Failed to store embeddings: ${insertError.message}`);
       } else {
         storedCount = chunksToInsert.length;
-        console.log(`Stored ${storedCount} chunks in database`);
+        console.log(`Successfully stored ${storedCount} chunks in database`);
+        
+        // Update knowledge base counts if we have a KB ID
+        if (knowledgeBaseId) {
+          const { count: totalChunks } = await supabase
+            .from('document_chunks')
+            .select('*', { count: 'exact', head: true })
+            .eq('knowledge_base_id', knowledgeBaseId);
+
+          const { data: uniqueDocs } = await supabase
+            .from('document_chunks')
+            .select('document_id')
+            .eq('knowledge_base_id', knowledgeBaseId);
+          
+          const uniqueDocCount = new Set(uniqueDocs?.map(d => d.document_id) || []).size;
+
+          await supabase
+            .from('knowledge_bases')
+            .update({ 
+              chunk_count: totalChunks || 0,
+              document_count: uniqueDocCount,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', knowledgeBaseId);
+          
+          console.log(`Updated KB ${knowledgeBaseId}: ${totalChunks} chunks, ${uniqueDocCount} docs`);
+        }
       }
+    } else if (storeInDb && !userId) {
+      console.warn('storeInDb is true but no userId provided - skipping storage');
     }
 
     return new Response(
@@ -122,14 +150,9 @@ async function generateEmbeddingsForBatch(
   apiKey: string,
   dimensions: number
 ): Promise<number[][]> {
-  // Using Lovable AI with a model that can generate semantic representations
-  // We'll ask the model to generate a consistent embedding-like output
-  
   const embeddings: number[][] = [];
   
   for (const text of texts) {
-    // Generate a deterministic embedding based on text content
-    // This is a simplified approach - in production, use a dedicated embedding API
     const embedding = await generateSemanticEmbedding(text, apiKey, dimensions);
     embeddings.push(embedding);
   }
