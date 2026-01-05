@@ -176,6 +176,15 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
     }
   }, [props.id, inputs, updateNodeData, toast, assistantSettings, currentMode, ragStats]);
 
+  // Register onRun for BaseNode's Run button
+  const handleProcessRef = React.useRef(handleProcess);
+  handleProcessRef.current = handleProcess;
+
+  React.useEffect(() => {
+    const { updateNodeData } = useFlowStore.getState();
+    updateNodeData(props.id, { onRun: () => handleProcessRef.current() });
+  }, [props.id]);
+
   const creativityLabel = useMemo(() => {
     const creativity = assistantSettings?.creativity || 70;
     if (creativity < 30) return 'Conservador';
@@ -259,21 +268,6 @@ export const AssistantNode: React.FC<NodeProps> = (props) => {
           </div>
         )}
 
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleProcess();
-          }}
-          disabled={isProcessing}
-          className={cn(
-            'nodrag w-full gap-2 bg-secondary/20 hover:bg-secondary/30 text-secondary border border-secondary/30',
-            isProcessing && 'opacity-50'
-          )}
-          variant="outline"
-        >
-          <ModeIcon className={cn('w-4 h-4', isProcessing && 'animate-spin')} />
-          {isProcessing ? 'Processando...' : `${modeConfig[currentMode].label} Idea`}
-        </Button>
 
         {/* Output Display */}
         {prompt && (
