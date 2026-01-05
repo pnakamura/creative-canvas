@@ -5,12 +5,85 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
-:root {
-  /* Edge validation colors */
-  --edge-valid: 142 71% 45%;
-  --edge-warning: 38 92% 50%;
-  --edge-invalid: 0 84% 60%;
-  --edge-rag: 262 83% 58%;
+  /* Light Theme */
+  :root {
+    /* Edge validation colors */
+    --edge-valid: 142 71% 45%;
+    --edge-warning: 38 92% 50%;
+    --edge-invalid: 0 84% 60%;
+    --edge-rag: 262 83% 58%;
+
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 187 80% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 260 60% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 20% 45%;
+
+    --accent: 280 65% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 187 80% 42%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens for CreativeFlow - Light */
+    --node-bg: 0 0% 100%;
+    --node-border: 214 32% 85%;
+    --node-glow: 187 80% 42%;
+    --node-active: 260 60% 50%;
+    
+    --handle-input: 140 70% 45%;
+    --handle-output: 280 65% 55%;
+    --handle-image: 45 90% 50%;
+    --handle-text: 187 80% 42%;
+    --handle-context: 320 70% 55%;
+    
+    --edge-default: 214 32% 70%;
+    --edge-active: 187 80% 42%;
+    
+    --glass-bg: 0 0% 100% / 0.9;
+    --glass-border: 214 32% 85% / 0.5;
+    
+    --grid-color: 214 32% 92%;
+    
+    /* Node type border colors */
+    --node-source: 140 70% 45%;
+    --node-processor: 260 60% 50%;
+    --node-generator: 45 90% 50%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 187 80% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 187 80% 42%;
+  }
+
+  /* Dark Theme */
+  .dark {
+    --edge-valid: 142 71% 45%;
+    --edge-warning: 38 92% 50%;
+    --edge-invalid: 0 84% 60%;
+    --edge-rag: 262 83% 58%;
 
     --background: 222 47% 6%;
     --foreground: 210 40% 96%;
@@ -40,9 +113,7 @@
     --input: 222 30% 14%;
     --ring: 187 80% 55%;
 
-    --radius: 0.75rem;
-
-    /* Custom tokens for CreativeFlow */
+    /* Custom tokens for CreativeFlow - Dark */
     --node-bg: 222 47% 11%;
     --node-border: 222 30% 22%;
     --node-glow: 187 80% 55%;
@@ -67,36 +138,6 @@
     --node-processor: 260 60% 55%;
     --node-generator: 45 90% 55%;
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 187 80% 55%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 30% 14%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 222 30% 18%;
-    --sidebar-ring: 187 80% 55%;
-  }
-
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 187 80% 55%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 260 60% 55%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 222 30% 14%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 280 65% 60%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 30% 18%;
-    --input: 222 30% 14%;
-    --ring: 187 80% 55%;
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 40% 96%;
     --sidebar-primary: 187 80% 55%;
