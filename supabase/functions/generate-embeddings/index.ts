@@ -219,28 +219,33 @@ async function generateSemanticEmbedding(
   }
 }
 
-// Fallback: Generate deterministic embedding from text hash
+// Consistent word-based embedding for semantic similarity
 function generateHashEmbedding(text: string, dimensions: number): number[] {
+  const normalizedText = text.toLowerCase().trim();
   const embedding: number[] = [];
-  let hash = 0;
   
-  // Create a seed from text
-  for (let i = 0; i < text.length; i++) {
-    const char = text.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
+  // Use words as base for basic semantic consistency
+  const words = normalizedText.split(/\s+/).filter(w => w.length > 2);
+  const wordHashes = words.map(w => {
+    let hash = 5381;
+    for (let i = 0; i < w.length; i++) {
+      hash = ((hash << 5) + hash) + w.charCodeAt(i);
+    }
+    return hash >>> 0;
+  });
   
-  // Generate pseudo-random but deterministic values
   for (let i = 0; i < dimensions; i++) {
-    const seed = hash + i * 31;
-    const value = Math.sin(seed) * 10000;
-    embedding.push(value - Math.floor(value));
+    let value = 0;
+    for (const hash of wordHashes) {
+      value += Math.sin((hash * (i + 1)) * 0.0001);
+    }
+    value = value / (wordHashes.length || 1);
+    embedding.push(Math.tanh(value));
   }
   
-  // Normalize to unit vector
+  // L2 normalize to unit vector
   const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-  return embedding.map(val => val / magnitude);
+  return embedding.map(val => val / (magnitude || 1));
 }
 
 function padOrTruncate(arr: number[], targetLength: number): number[] {
