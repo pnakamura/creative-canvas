@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-ignore - pdfjs-serverless is a valid Deno import
-import { getDocument } from "https://esm.sh/pdfjs-serverless";
+import { getDocument } from "https://esm.sh/pdfjs-serverless@0.4.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,14 +20,31 @@ interface ExtractionResult {
   };
 }
 
+// Helper function to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+    )
+  ]);
+}
+
 // Extract text from PDF using pdfjs-serverless (no web worker required)
 async function extractPdfText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pages: number }> {
   try {
     console.log(`Starting PDF extraction, size: ${arrayBuffer.byteLength} bytes`);
     const startTime = Date.now();
     
-    // Load the PDF using pdfjs-serverless (designed for serverless/Deno environments)
-    const doc = await getDocument(new Uint8Array(arrayBuffer)).promise;
+    // Load the PDF using pdfjs-serverless with proper options
+    const doc = await withTimeout(
+      getDocument({
+        data: new Uint8Array(arrayBuffer),
+        useSystemFonts: true,
+      }).promise,
+      30000,
+      'PDF loading timed out - file may be too large or corrupted'
+    ) as any;
     
     const numPages = doc.numPages;
     console.log(`PDF loaded: ${numPages} pages`);
