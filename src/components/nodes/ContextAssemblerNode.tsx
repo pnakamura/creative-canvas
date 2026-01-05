@@ -94,9 +94,13 @@ export const ContextAssemblerNode: React.FC<NodeProps> = (props) => {
     }
   }, [props.id, inputs, settings, updateNodeData]);
 
+  // Use ref to avoid infinite loop - ref doesn't cause re-renders
+  const handleRunRef = React.useRef(handleRun);
+  handleRunRef.current = handleRun;
+
   React.useEffect(() => {
-    updateNodeData(props.id, { onRun: handleRun });
-  }, [handleRun]);
+    updateNodeData(props.id, { onRun: () => handleRunRef.current() });
+  }, [props.id, updateNodeData]);
 
   const metadata = nodeData.contextMetadata as { documentsIncluded: number; totalDocuments: number; estimatedTokens: number; format: string } | undefined;
 
