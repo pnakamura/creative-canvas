@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as pdfjs from "https://esm.sh/pdfjs-dist@4.0.379/build/pdf.min.mjs";
+// @ts-ignore - pdfjs-serverless is a valid Deno import
+import { getDocument } from "https://esm.sh/pdfjs-serverless";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,30 +20,26 @@ interface ExtractionResult {
   };
 }
 
-// Extract text from PDF using PDF.js
+// Extract text from PDF using pdfjs-serverless (no web worker required)
 async function extractPdfText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pages: number }> {
   try {
     console.log(`Starting PDF extraction, size: ${arrayBuffer.byteLength} bytes`);
     const startTime = Date.now();
     
-    // Load the PDF document
-    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
-    const pdf = await loadingTask.promise;
+    // Load the PDF using pdfjs-serverless (designed for serverless/Deno environments)
+    const doc = await getDocument(new Uint8Array(arrayBuffer)).promise;
     
-    const numPages = pdf.numPages;
+    const numPages = doc.numPages;
     console.log(`PDF loaded: ${numPages} pages`);
     
     const textParts: string[] = [];
-    
-    // Extract text from each page (limit to first 50 pages for performance)
     const maxPages = Math.min(numPages, 50);
     
     for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
       try {
-        const page = await pdf.getPage(pageNum);
+        const page = await doc.getPage(pageNum);
         const textContent = await page.getTextContent();
         
-        // Extract text items and join them
         const pageText = textContent.items
           .map((item: any) => item.str || '')
           .join(' ');
