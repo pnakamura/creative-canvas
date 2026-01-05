@@ -172,6 +172,32 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
     }
   };
 
+  // Check if extraction result indicates a failed or placeholder extraction
+  const isExtractionInvalid = (text: string, fileType: string, wordCount: number): { invalid: boolean; reason?: string } => {
+    // Check for placeholder text patterns
+    const placeholderPatterns = [
+      'This is a PDF file. For full text extraction',
+      '[PDF Document:',
+      'For production use, consider integrating',
+      '[No text content found in PDF',
+      '[Could not extract text',
+      '[Error extracting',
+    ];
+    
+    for (const pattern of placeholderPatterns) {
+      if (text.includes(pattern)) {
+        return { invalid: true, reason: 'Extração retornou placeholder ao invés do conteúdo real' };
+      }
+    }
+    
+    // Check for suspiciously low word count for PDFs
+    if (fileType === 'pdf' && wordCount < 20) {
+      return { invalid: true, reason: 'PDF pode ser escaneado/imagem - muito pouco texto extraído' };
+    }
+    
+    return { invalid: false };
+  };
+
   const extractTextContent = async (url: string, type: string, name: string) => {
     setIsExtracting(true);
     setUploadProgress(70);
@@ -185,24 +211,47 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
 
       if (error) throw error;
 
+      const extractedText = data?.text || '';
       const metadata: FileMetadata = data?.metadata || {
         fileName: name,
         fileType: type,
-        characterCount: data?.text?.length || 0,
-        wordCount: data?.text?.split(/\s+/).filter((w: string) => w).length || 0,
+        characterCount: extractedText.length,
+        wordCount: extractedText.split(/\s+/).filter((w: string) => w).length,
         extractedAt: new Date().toISOString(),
       };
 
-      updateNodeData(props.id, {
-        fileUploadData: {
-          ...nodeData.fileUploadData,
-          extractedText: data?.text || '',
-          metadata,
-        },
-        extractedText: data?.text || '', // Also set at node level for compatibility
-        isProcessing: false,
-        isComplete: true,
-      });
+      // Validate extraction quality
+      const validation = isExtractionInvalid(extractedText, type, metadata.wordCount);
+      
+      if (validation.invalid) {
+        console.warn('Extraction validation failed:', validation.reason);
+        toast.warning(validation.reason || 'Extração do documento pode estar incompleta');
+        
+        updateNodeData(props.id, {
+          fileUploadData: {
+            ...nodeData.fileUploadData,
+            extractedText,
+            metadata,
+            extractionWarning: validation.reason,
+          },
+          extractedText,
+          isProcessing: false,
+          isComplete: false, // Don't mark as complete if extraction is suspicious
+          error: validation.reason,
+        });
+      } else {
+        updateNodeData(props.id, {
+          fileUploadData: {
+            ...nodeData.fileUploadData,
+            extractedText,
+            metadata,
+            extractionWarning: undefined,
+          },
+          extractedText,
+          isProcessing: false,
+          isComplete: true,
+        });
+      }
 
       setUploadProgress(100);
     } catch (err) {
