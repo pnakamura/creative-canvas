@@ -48,7 +48,7 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newKbName, setNewKbName] = useState('');
   const [newKbDescription, setNewKbDescription] = useState('');
-
+  const [isDeletingChunks, setIsDeletingChunks] = useState(false);
   // Check if connected to EmbeddingNode
   const { inputs } = getConnectedNodes(props.id);
   const embeddingNode = inputs.find(n => n.data.type === 'embedding');
@@ -155,7 +155,41 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
     }
   }, [user, fetchKnowledgeBases]);
 
-  // Create a new knowledge base
+  // Delete all chunks from a knowledge base (but keep the KB)
+  const deleteAllChunks = useCallback(async (kbId: string) => {
+    if (!user) return;
+    
+    setIsDeletingChunks(true);
+    try {
+      const { error } = await supabase
+        .from('document_chunks')
+        .delete()
+        .eq('knowledge_base_id', kbId);
+
+      if (error) throw error;
+      
+      // Update KB counts to 0
+      await supabase
+        .from('knowledge_bases')
+        .update({ 
+          chunk_count: 0,
+          document_count: 0,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', kbId);
+      
+      toast.success('Todos os chunks foram deletados');
+      setDocuments([]);
+      fetchKnowledgeBases();
+      updateNodeData(props.id, { chunkCount: 0, documentChunks: [] });
+    } catch (error) {
+      console.error('Error deleting chunks:', error);
+      toast.error('Falha ao deletar chunks');
+    } finally {
+      setIsDeletingChunks(false);
+    }
+  }, [user, fetchKnowledgeBases, props.id, updateNodeData]);
+
   const createKnowledgeBase = useCallback(async () => {
     if (!user || !newKbName.trim()) return;
     
@@ -414,9 +448,30 @@ export const VectorStoreNode: React.FC<NodeProps> = (props) => {
         {/* Selected KB Details */}
         {selectedKb && selectedKbData && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-foreground/80">Documentos</span>
-              {isLoadingDocs && <Loader2 className="w-3 h-3 animate-spin" />}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-foreground/80">Documentos</span>
+                {isLoadingDocs && <Loader2 className="w-3 h-3 animate-spin" />}
+              </div>
+              {documents.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteAllChunks(selectedKb);
+                  }}
+                  disabled={isDeletingChunks}
+                  className="nodrag h-6 px-2 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                  title="Deletar todos os chunks"
+                >
+                  {isDeletingChunks ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3 h-3" />
+                  )}
+                </Button>
+              )}
             </div>
             
             <ScrollArea className="h-[100px] rounded-md border border-border/50 bg-background/30">
