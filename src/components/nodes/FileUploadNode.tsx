@@ -203,9 +203,17 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
     setUploadProgress(70);
 
     try {
-      const { data, error } = await supabase.functions.invoke('extract-text', {
+      const invokePromise = supabase.functions.invoke('extract-text', {
         body: { url, type, fileName: name },
       });
+
+      // Prevent the UI from hanging indefinitely if the backend function stalls.
+      const { data, error } = await Promise.race([
+        invokePromise,
+        new Promise<{ data: any; error: any }>((_, reject) =>
+          setTimeout(() => reject(new Error('Tempo limite ao extrair texto (35s).')), 35000)
+        ),
+      ]);
 
       setUploadProgress(90);
 
@@ -222,11 +230,11 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
 
       // Validate extraction quality
       const validation = isExtractionInvalid(extractedText, type, metadata.wordCount);
-      
+
       if (validation.invalid) {
         console.warn('Extraction validation failed:', validation.reason);
         toast.warning(validation.reason || 'Extração do documento pode estar incompleta');
-        
+
         updateNodeData(props.id, {
           fileUploadData: {
             ...nodeData.fileUploadData,
@@ -255,9 +263,11 @@ export const FileUploadNode: React.FC<NodeProps> = (props) => {
 
       setUploadProgress(100);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Text extraction failed';
       console.error('Text extraction failed:', err);
+      toast.error(message);
       updateNodeData(props.id, {
-        error: 'Text extraction failed',
+        error: message,
         isProcessing: false,
       });
     } finally {
