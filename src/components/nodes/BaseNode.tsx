@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
 interface BaseNodeProps extends NodeProps {
   icon: LucideIcon;
   iconColor?: string;
@@ -167,40 +167,34 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
             )}
           </div>
 
-          {/* Status indicators - larger and with tooltips */}
+          {/* Status indicators - using native title for tooltips */}
           <div className="flex-shrink-0">
             {currentlyProcessing && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/20 border border-primary/30">
-                    <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                    <span className="text-[10px] font-medium text-primary">Running</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top">Processing...</TooltipContent>
-              </Tooltip>
+              <div 
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/20 border border-primary/30"
+                title="Processing..."
+              >
+                <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                <span className="text-[10px] font-medium text-primary">Running</span>
+              </div>
             )}
             {isComplete && !currentlyProcessing && !error && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 border border-green-500/30">
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
-                    <span className="text-[10px] font-medium text-green-500">Done</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top">Completed successfully</TooltipContent>
-              </Tooltip>
+              <div 
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 border border-green-500/30"
+                title="Completed successfully"
+              >
+                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                <span className="text-[10px] font-medium text-green-500">Done</span>
+              </div>
             )}
             {error && !currentlyProcessing && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-destructive/20 border border-destructive/30">
-                    <AlertCircle className="w-3 h-3 text-destructive" />
-                    <span className="text-[10px] font-medium text-destructive">Error</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top">{error}</TooltipContent>
-              </Tooltip>
+              <div 
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-destructive/20 border border-destructive/30"
+                title={typeof error === 'string' ? error : 'Error occurred'}
+              >
+                <AlertCircle className="w-3 h-3 text-destructive" />
+                <span className="text-[10px] font-medium text-destructive">Error</span>
+              </div>
             )}
           </div>
         </div>
